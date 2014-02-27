@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin title="XML/A Shell">
+
+  <overlays>
+    <overlay id="startup.pash" resourcebundle="api/repos/pash/resources/messages/launchermessages.properties" priority="2">
+      <menubar id="toolsmenu">
+        <menuitem
+          id="pash"
+          label="Pentaho Analysis Shell"
+          command="mantleXulHandler.openUrl('Analysis Shell', 'Analysis Shell', 'content/pash/html/window.html')"
+        />
+      </menubar>
+    </overlay>
+  </overlays>
+
+  <static-paths>
+      <static-path url="/pash" localFolder="."/>
+      <static-path url="/pash/css" localFolder="css"/>
+      <static-path url="/pash/js" localFolder="js"/>
+      <static-path url="/pash/html" localFolder="html"/>
+  </static-paths>
+
+</plugin>
+
