@@ -1,0 +1,31 @@
+<project name="pash" default="dist" basedir=".">
+    <description>
+        Pash
+    </description>
+
+  <property name="bin" location="bin"/>
+  
+  <target name="init">
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <!-- Create the build directory structure used by compile -->
+    <mkdir dir="${build}"/>
+  </target>
+
+  <target name="dist" description="generate the distribution" >
+    <!-- Create the distribution directory -->
+    <mkdir dir="${bin}/${ant.project.name}"/>
+    <copy todir="${bin}/${ant.project.name}">
+      <file file="LICENSE"/>
+      <file file="README.md"/>
+      <file file="plugin.xml"/>
+    </copy>
+    <copydir src="css" dest="${bin}/${ant.project.name}"/>
+    <copydir src="js" dest="${bin}/${ant.project.name}"/>
+    <copydir src="html" dest="${bin}/${ant.project.name}"/>
+    <delete file="${bin}/${ant.project.name}.zip"/>
+    <zip destfile="${bin}/${ant.project.name}.zip" basedir="${bin}"/>
+    <delete dir="${bin}/${ant.project.name}"/>
+  </target>
+
+</project>
