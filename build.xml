@@ -19,6 +19,7 @@
       <file file="LICENSE"/>
       <file file="README.md"/>
       <file file="plugin.xml"/>
+      <file file="version.xml"/>
     </copy>
     <copydir src="css" dest="${bin}/${ant.project.name}/css"/>
     <copydir src="js" dest="${bin}/${ant.project.name}/js"/>
