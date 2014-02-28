@@ -20,9 +20,9 @@
       <file file="README.md"/>
       <file file="plugin.xml"/>
     </copy>
-    <copydir src="css" dest="${bin}/${ant.project.name}"/>
-    <copydir src="js" dest="${bin}/${ant.project.name}"/>
-    <copydir src="html" dest="${bin}/${ant.project.name}"/>
+    <copydir src="css" dest="${bin}/${ant.project.name}/css"/>
+    <copydir src="js" dest="${bin}/${ant.project.name}/js"/>
+    <copydir src="html" dest="${bin}/${ant.project.name}/html"/>
     <delete file="${bin}/${ant.project.name}.zip"/>
     <zip destfile="${bin}/${ant.project.name}.zip" basedir="${bin}"/>
     <delete dir="${bin}/${ant.project.name}"/>
