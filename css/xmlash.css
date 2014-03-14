@@ -30,9 +30,10 @@ table {
 table, thead td, thead th {
     border-style: dashed;
 }
-tbody td {
+tbody td, tbody th {
     border-style: none dashed none dashed;
 }
+
 .wsh {
   font-family: Courier, monospace;
   font-size: 12pt;

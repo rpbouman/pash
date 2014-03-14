@@ -155,50 +155,50 @@ var xmlashPrototype = {
   },
   renderRowset: function(rowset, fieldNames) {
     try {
-        var result,
-            thead = "", cols = "", tbody = "",
-            fieldCount, fieldDef, fieldName, field, i
-        ;
-        if (rowset.hasMoreRows()) {
-            if (!fieldNames) {
-                fieldNames = rowset.getFieldNames();
-            }
-            fieldCount = fieldNames.length;
-            for (i = 0; i < fieldCount; i++){
-                fieldName = fieldNames[i];
-                fieldDef = rowset.fieldDef(fieldName);
-                var className = fieldDef.type;
-                if (className !== null && className.indexOf(":") !== -1) {
-                  className = className.substr(className.lastIndexOf(":") + 1);
-                }
-                cols += "<col class=\"" + className + "\"/>";
-                thead += "<th>" + fieldDef.label + "</th>";
-            }
-            thead = "<thead><tr>" + thead + "</tr></thead>";
-            while (rowset.hasMoreRows()){
-                for (i = 0; i < fieldCount; i++){
-                    fieldName = fieldNames[i];
-                    field = rowset.fieldVal(fieldName);
-                    fieldDef = rowset.fieldDef(fieldName);
-                    className = fieldDef.type;
-                    if (className !== null && className.indexOf(":") !== -1) {
-                      className = className.substr(className.lastIndexOf(":") + 1);
-                    }
-                    if (className === "dateTime" && typeof(field)==="number") {
-                      field = new Date(field);
-                    }
-                    tbody += "<td class=\"" + className + "\">" + field + "</td>";
-                }
-                tbody = "<tr>" + tbody + "</tr>";
-                rowset.nextRow();
-            }
-            tbody = "<tbody>" + tbody + "</tbody>";
-            result = "<table>" + cols + thead + tbody + "</table>";
+      var result,
+          thead = "", cols = "", tbody = "",
+          fieldCount, fieldDef, fieldName, field, i
+      ;
+      if (rowset.hasMoreRows()) {
+        if (!fieldNames) {
+          fieldNames = rowset.getFieldNames();
         }
-        else {
-             result = "No rows to display.";
+        fieldCount = fieldNames.length;
+        for (i = 0; i < fieldCount; i++){
+          fieldName = fieldNames[i];
+          fieldDef = rowset.fieldDef(fieldName);
+          var className = fieldDef.type;
+          if (className !== null && className.indexOf(":") !== -1) {
+            className = className.substr(className.lastIndexOf(":") + 1);
+          }
+          cols += "<col class=\"" + className + "\"/>";
+          thead += "<th>" + fieldDef.label + "</th>";
         }
-        this.writeResult(result);
+        thead = "<thead><tr>" + thead + "</tr></thead>";
+        while (rowset.hasMoreRows()){
+          for (i = 0; i < fieldCount; i++){
+            fieldName = fieldNames[i];
+            field = rowset.fieldVal(fieldName);
+            fieldDef = rowset.fieldDef(fieldName);
+            className = fieldDef.type;
+            if (className !== null && className.indexOf(":") !== -1) {
+              className = className.substr(className.lastIndexOf(":") + 1);
+            }
+            if (className === "dateTime" && typeof(field)==="number") {
+              field = new Date(field);
+            }
+            tbody += "<td class=\"" + className + "\">" + field + "</td>";
+          }
+          tbody = "<tr>" + tbody + "</tr>";
+          rowset.nextRow();
+        }
+        tbody = "<tbody>" + tbody + "</tbody>";
+        result = "<table>" + cols + thead + tbody + "</table>";
+      }
+      else {
+        result = "No rows to display.";
+      }
+      this.writeResult(result);
     }
     catch (e) {
       this.error(e);
@@ -307,16 +307,28 @@ var xmlashPrototype = {
       }
 
       function renderTuple(tuple) {
-          me.writeResult(tuple);
+          me.writeResult(getTupleName(tuple));
       }
 
       function renderHeader(axis, dummy) {
-          var thead = "<thead><tr>";
-          if (dummy) thead += "<td><br/></td>";
-          axis.eachTuple(function(tuple){
-              thead += "<td>" + getTupleName(tuple) + "</td>";
-          })
-          thead += "</tr></thead>";
+          var thead = "<thead>";
+          var i = 0;
+          axis.eachHierarchy(function(hierarchy){
+            thead += "<tr>";
+            if (!i && dataset.hasRowAxis()) {
+              var rowSpan = axis.hierarchyCount();
+              var rowAxis = dataset.getRowAxis();
+              var colSpan = rowAxis.hierarchyCount();
+              thead += "<td rowspan=\"" + rowSpan + "\" colspan=\"" + colSpan + "\"><br/></td>";
+            }
+            axis.eachTuple(function(tuple){
+              var member = tuple.members[i];
+              thead += "<th>" + member.Caption + "</th>";
+            });
+            thead += "</tr>";
+            i++;
+          });
+          thead += "</thead>";
           return thead;
       }
 
@@ -336,19 +348,26 @@ var xmlashPrototype = {
       }
 
       function renderTable() {
-          var tbody, thead, value,
-              columnAxis = dataset.getColumnAxis()
-          ;
-          thead = renderHeader(columnAxis, true);
-          tbody = "<tbody>";
-          dataset.getRowAxis().eachTuple(function(tuple){
-              tbody += "<tr>";
-              tbody += "<td>" + getTupleName(tuple) + "</td>";
-              tbody += renderCells(columnAxis);
-              tbody += "</tr>";
+        var tbody, thead, value,
+            columnAxis = dataset.getColumnAxis(),
+            rowAxis = rowAxis = dataset.getRowAxis()
+        ;
+        thead = renderHeader(columnAxis, true);
+        tbody = "<tbody>";
+        var i;
+        rowAxis.eachTuple(function(tuple){
+          tbody += "<tr>";
+          i = 0;
+          rowAxis.eachHierarchy(function(hierarchy){
+            var member = tuple.members[i];
+            tbody += "<th>" + member.Caption + "</th>";
+            i++;
           });
-          tbody += "</tbody>";
-          me.writeResult("<table>" + thead + tbody + "</table>");
+          tbody += renderCells(columnAxis);
+          tbody += "</tr>";
+        });
+        tbody += "</tbody>";
+        me.writeResult("<table>" + thead + tbody + "</table>");
       }
 
       function renderAxis(axisId) {
@@ -390,6 +409,7 @@ var xmlashPrototype = {
     var me = this;
     var statement = me.statementLines.join("\n");
     statement = statement.substr(0, statement.lastIndexOf(";"));
+    statement.replace(/\xA0/g, " ");
     var request = me.xmlaRequest;
     if (!request.properties) request.properties = {};
     request.properties[Xmla.PROP_FORMAT] = Xmla.PROP_FORMAT_MULTIDIMENSIONAL;
