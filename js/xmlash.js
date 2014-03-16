@@ -213,7 +213,8 @@ var xmlashPrototype = {
       HIERARCHIES: "discoverMDHierarchies",
       LEVELS: "discoverMDLevels",
       MEASURES: "discoverMDMeasures",
-      MEMBERS: "discoverMDMembers"
+      MEMBERS: "discoverMDMembers",
+      PROPERTIES: "discoverMDProperties"
     };
     if (!this.hasMoreTokens() || typeof(func = keywords[(token = this.nextToken()).text.toUpperCase()])!=="string") {
     
@@ -228,11 +229,16 @@ var xmlashPrototype = {
       this.error("Extra token \"" + this.nextToken().text + "\" appearing after command argument", true);
       return;
     }
-    var request = this.xmlaRequest;
+    var catalog, request = this.xmlaRequest;
     if (func === "discoverDBCatalogs") {
+      catalog = request.properties.Catalog;
+      request.callback = function(){
+        request.properties.Catalog = catalog;
+      }
       delete request.properties.Catalog;
     }
     else {
+      delete request.callback;
       if (typeof(request.properties) === "undefined") {
         request.properties = {};
       }
