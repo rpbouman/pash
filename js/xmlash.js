@@ -252,6 +252,9 @@ var xmlashPrototype = {
     };
     this.xmla[func].call(this.xmla, request);
   },
+  tutorialLine: "<a class=\"link\" target=\"_blank\" href=\"https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell\">" +
+                "https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell" +
+                "</a>",
   handleHelp: function(){
     var token, text, message = "";
     while (this.hasMoreTokens()){
@@ -263,8 +266,10 @@ var xmlashPrototype = {
       text = token.text.toUpperCase();
       switch (text) {
         case "HELP":
-          message += "<br/>Type HELP &lt;commmand&gt; to get help about a specific shell command."
-                     "<br/>Valid values for &lt;commmand&gt; are HELP, SHOW, and USE."
+          message += "<br/>Type HELP &lt;commmand&gt; to get help about a specific shell command." + 
+                     "<br/>Valid values for &lt;commmand&gt; are HELP, SHOW, and USE." + 
+                     "<br/>Check out the tutorial:" +
+                     "<br/>" + this.tutorialLine
           ;
           break;
         case "SHOW":
@@ -291,7 +296,10 @@ var xmlashPrototype = {
                 "<br/>To run the command or query, type a semi-colon (;), then press the Enter key." +
                 "<br/>" +
                 "<br/>To get help about a specific shell command, type HELP &lt;commmand&gt;." +
-                "<br/>Refer to the MDX specification for more information about writing MDX queries."
+                "<br/>Refer to the MDX specification for more information about writing MDX queries." +
+                "<br/>" +
+                "<br/>Check out the tutorial here:" +
+                "<br/>" + this.tutorialLine                
     }
     this.writeResult(message + "<br/>", true);
   },
@@ -435,7 +443,7 @@ var xmlashPrototype = {
     this.xmla.execute(request);
   },
   hasMoreTokens: function(){
-    return this.currentToken < this.tokens.length;
+    return this.tokens ? this.currentToken < this.tokens.length : false;
   },
   nextToken: function(){
     var token = null;
@@ -597,11 +605,6 @@ var Xmlash;
     "Pentaho Analysis shell powered by Xmla4js.",
     "Copyright 2014 Roland Bouman.",
     "This program is open source.",
-    "",
-    "Type a MDX query or one of the shell commands (HELP, SHOW and USE).",
-    "Terminate commands with a semicolon (;), then press the Enter key.",
-    "",
-    "Discovering datasources on " + xmlaUrl
   ];
   this.addListener("leaveLine", this.leaveLineHandler, this);
 }).prototype = xmlashPrototype;
@@ -617,6 +620,7 @@ var xmlash = new Xmlash({
 });
 var history = new WshHistory(xmlash);
 xmlash.render();
+xmlash.handleHelp();
 xmlash.initDatasources();
 
 })();

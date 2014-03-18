@@ -146,6 +146,7 @@ var Wsh;
         me.createLine(me.lines[i], "", "init");
       }
     }
+    this.fireEvent("rendered", this);
     me.createLine();
     me.updateCaretPosition();
     me.focus();
