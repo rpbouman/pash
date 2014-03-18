@@ -220,7 +220,7 @@ var xmlashPrototype = {
     
       this.error(
         "<br/>Unrecognized command argument \"" + token.text + "\"" + 
-        "<br/>Expected one of the following instead: CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, MEASURES, MEMBERS, LEVELS.",
+        "<br/>Expected one of the following instead: CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, LEVELS, MEASURES, MEMBERS, PROPERTIES.",
         true
       );
       return;
@@ -231,18 +231,17 @@ var xmlashPrototype = {
     }
     var catalog, request = this.xmlaRequest;
     if (func === "discoverDBCatalogs") {
-      catalog = request.properties.Catalog;
+      var catalog = request.properties.Catalog;
       request.callback = function(){
         request.properties.Catalog = catalog;
+        delete request.callback;
       }
       delete request.properties.Catalog;
     }
     else {
-      delete request.callback;
       if (typeof(request.properties) === "undefined") {
         request.properties = {};
       }
-      request.properties.Catalog = this.catalog;
       if (typeof(request.properties.Catalog) === "undefined") {
         this.error("No catalog selected. Please run the USE command to select a catalog.", true);
         return;
@@ -270,7 +269,7 @@ var xmlashPrototype = {
           break;
         case "SHOW":
           message += "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
-                     "<br/>Valid values for &lt;item&gt; are CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, MEASURES and MEMBERS." +
+                     "<br/>Valid values for &lt;item&gt; are CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, MEASURES, MEMBERS and PROPERTIES." +
                      "<br/>"+
                     "<br/>SHOW CATALOGS always lists all available catalogs." + 
                     "<br/>For all other items, you first have to select a particular catalog with the USE command."
@@ -415,7 +414,7 @@ var xmlashPrototype = {
     var me = this;
     var statement = me.statementLines.join("\n");
     statement = statement.substr(0, statement.lastIndexOf(";"));
-    statement.replace(/\xA0/g, " ");
+    statement = statement.replace(/\xA0/g, " ");
     var request = me.xmlaRequest;
     if (!request.properties) request.properties = {};
     request.properties[Xmla.PROP_FORMAT] = Xmla.PROP_FORMAT_MULTIDIMENSIONAL;
@@ -531,7 +530,7 @@ var xmlashPrototype = {
     me.xmla.discoverDataSources({
       success: function(xmla, request, rowset){
         rowset.eachRow(function(row){
-          me.createLine("Connected to datasource " + row.DataSourceName + ".", "");
+          me.writeResult("Connected to datasource " + row.DataSourceName + ".", "");
           me.xmlaRequest.properties.DataSourceInfo = row.DataSourceInfo;
           me.createLine();
           this.prompt = "pash> ";
@@ -616,6 +615,7 @@ for (prop in wshPrototype) {
 var xmlash = new Xmlash({
   caretInterval: 500
 });
+var history = new WshHistory(xmlash);
 xmlash.render();
 xmlash.initDatasources();
 

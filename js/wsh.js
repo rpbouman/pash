@@ -11,6 +11,7 @@ function gEl(id) {
 
 var Wsh;
 (Wsh = function(conf) {
+  this.lineId = 0;
   this.init(conf || {});
 }).prototype = {
   init: function(conf) {
@@ -142,7 +143,7 @@ var Wsh;
     container.appendChild(dom);
     if (me.lines){
       for (var i = 0; i < me.lines.length; i++) {
-        me.createLine(me.lines[i], "");
+        me.createLine(me.lines[i], "", "init");
       }
     }
     me.createLine();
@@ -260,10 +261,18 @@ var Wsh;
   escapeHTML: function(string){
     return string.replace("&", "&amp;").replace(">", "&gt;").replace("<", "&lt;");
   },
-  createLine: function(textString, promptString) {
-    if (this.fireEvent("beforeCreateLine", {}) === false) return;
+  createLine: function(textString, promptString, className) {
+    var cls = Wsh.prefix + "-line";
+    var id = cls + (++this.lineId);
+    if (this.fireEvent("beforeCreateLine", {
+      id: id
+    }) === false) return;
     var line = doc.createElement("DIV");
-    line.className = Wsh.prefix + "-line";
+    line.id = id;
+    if (className){
+      cls += " " + className;
+    }
+    line.className = cls;
 
     var prompt = doc.createElement("SPAN");
     prompt.className = Wsh.prefix + "-prompt";
@@ -288,6 +297,7 @@ var Wsh;
 
     this.getTextArea().value = "";
     this.fireEvent("afterCreateLine", {
+      id: id,
       dom: line
     });
     this.alignDom();
@@ -333,7 +343,7 @@ var Wsh;
   },
   getLineTextString: function(line) {
     var text = this.getLineText(line);
-    return text.textContent || prompt.innerText;
+    return text.textContent || text.innerText;
   },
   setLineText: function(string, line) {
     if (!line) line = this.getCurrentLine();
@@ -374,6 +384,60 @@ Wsh.defaultConfig = {
   prompt: "wsh&gt; ",
   caretInterval: 200
 };
+
+var WshHistory;
+WshHistory = function(wsh){
+  wsh.addListener("keydown", this.keyDown, this);
+  this.index = 0;
+};
+WshHistory.prototype = {
+  keyDown: function(wsh, name, event){
+    var keyCode = event.keyCode;
+    var i = 0, l = 0, idx, oldIndex = this.index;
+    switch (keyCode) {
+      case 38:  //up arrow
+        this.index++;
+        console.log(this.index);
+        break;
+      case 40:  //down arrow
+        if (this.index) {
+          this.index--;
+          console.log(this.index);
+          l = 1;
+        }
+        break;
+      case 13:
+        this.index = 0;
+      default:
+        return;
+    }
+    var lines = wsh.getLines(), line, text, texts = {};
+    while (this.index > i++) {
+      while (true) {
+        ++l;
+        idx = lines.length - l;
+        if (idx < 0) {
+          this.index = oldIndex;
+          return;
+        };
+        line = lines[idx];
+        if (line.className !== "wsh-line") continue;
+        text = wsh.getLineTextString(line);
+        if (text === "") continue;
+        if (texts[text]) continue;
+        texts[text] = true;
+        break;
+      };
+    }
+    if (!line) {
+      this.index = oldIndex;
+    }
+    text = wsh.getLineTextString(line);
+    wsh.getTextArea().value = text;
+  }
+};
+
+exports.WshHistory = WshHistory;
 
 return exports.Wsh = Wsh;
 })(typeof(exports) === "object" ? exports : window);
