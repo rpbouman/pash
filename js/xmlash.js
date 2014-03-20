@@ -1,4 +1,4 @@
-(function(){
+(function(exports) {
 
 //http://en.wikipedia.org/wiki/Levenshtein_distance
 function levenstein(s1, l1, s2, l2) {
@@ -50,7 +50,69 @@ function editDistance(a, b){
   return matrix[b.length][a.length];
 };
 
-var xmlashPrototype = {
+var Xmlash = function(conf){
+  Wsh.apply(this, arguments);
+  this.prompt = "";
+  this.statementLines = [];
+  var xmlaUrl = document.location.href; 
+  var i = xmlaUrl.indexOf("/content");
+  xmlaUrl = xmlaUrl.substr(0, i);
+  xmlaUrl += "/Xmla";
+  this.xmlaRequest = {
+    //forceResponseXMLEmulation: true,
+    async: true,
+    url: xmlaUrl,
+    properties: {
+    },
+    restrictions: {
+    }
+  };
+  this.xmla = new Xmla(this.xmlaRequest);
+  this.xmla.addListener([
+    {
+      events: Xmla.EVENT_REQUEST,
+      handler: function(){
+        this.getTextArea().value = "";
+        this.blockInput(true);
+      },
+      scope: this
+    },
+    {
+      events: Xmla.EVENT_SUCCESS,
+      handler: function(){
+        this.blockInput(false);
+      },
+      scope: this
+    },
+    {
+      events: Xmla.EVENT_ERROR,
+      handler: function(xmla, request){
+        try {
+          var xml = request.xhr.responseXML;
+          var code = xml.getElementsByTagName("code")[0].firstChild.data;
+          var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
+          this.error(desc + " (" + code + ")");
+        }
+        catch (e) {
+          debugger;
+        }
+        this.blockInput(false);
+      },
+      scope: this
+    }
+  ]);
+  this.lines = [
+    "Pentaho Analysis shell powered by Xmla4js.",
+    "Copyright 2014 Roland Bouman.",
+    "This program is open source.",
+  ];
+  this.addListener("leaveLine", this.leaveLineHandler, this);
+  this.history = new exports.WshHistory(this);
+  this.render();
+  this.handleHelp();
+  this.initDatasources();
+};
+xmlashPrototype = {
   //      1     2     34         5          678                9    10                     11           12                    13
   regex: /(\s+)|(\w+)|(("[^"]*")|('[^']*'))|(((\/\/|--)[^\n]*)|(\/\*([^\*]|\*[^\/])*\*\/))|(\[[^\]]+\])|([\.,\*\-\+\(\):<>=])|(;)/g,
   tokenTypes: {
@@ -544,70 +606,24 @@ var xmlashPrototype = {
           this.prompt = "pash> ";
           me.createLine("", this.prompt);
         });
+      },
+      error: function(){
+        win.parent.mantle_showMessage(
+          "Error discovering datasources",
+          "An error occurred when attempting to find XML/A datasources." +
+          "This maybe due to a misconfiguration of one of your cubes." +
+          "See http://jira.pentaho.com/browse/MONDRIAN-1056 for more details."
+        )
       }
     });
+  },
+  getXmla: function(){
+    return this.xmla;
+  },
+  getXmlaRequest: function(){
+    return this.xmlaRequest;
   }
 };
-
-var Xmlash;
-(Xmlash = function(conf){
-  Wsh.apply(this, arguments);
-  this.prompt = "";
-  this.statementLines = [];
-  var xmlaUrl = document.location.href; 
-  var i = xmlaUrl.indexOf("/content");
-  xmlaUrl = xmlaUrl.substr(0, i);
-  xmlaUrl += "/Xmla";
-  this.xmlaRequest = {
-    //forceResponseXMLEmulation: true,
-    async: true,
-    url: xmlaUrl,
-    properties: {
-    },
-    restrictions: {
-    }
-  };
-  this.xmla = new Xmla(this.xmlaRequest);
-  this.xmla.addListener([
-    {
-      events: Xmla.EVENT_REQUEST,
-      handler: function(){
-        this.getTextArea().value = "";
-        this.blockInput(true);
-      },
-      scope: this
-    },
-    {
-      events: Xmla.EVENT_SUCCESS,
-      handler: function(){
-        this.blockInput(false);
-      },
-      scope: this
-    },
-    {
-      events: Xmla.EVENT_ERROR,
-      handler: function(xmla, request){
-        try {
-          var xml = request.xhr.responseXML;
-          var code = xml.getElementsByTagName("code")[0].firstChild.data;
-          var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
-          this.error(desc + " (" + code + ")");
-        }
-        catch (e) {
-          debugger;
-        }
-        this.blockInput(false);
-      },
-      scope: this
-    }
-  ]);
-  this.lines = [
-    "Pentaho Analysis shell powered by Xmla4js.",
-    "Copyright 2014 Roland Bouman.",
-    "This program is open source.",
-  ];
-  this.addListener("leaveLine", this.leaveLineHandler, this);
-}).prototype = xmlashPrototype;
 
 var prop, wshPrototype = Wsh.prototype;
 for (prop in wshPrototype) {
@@ -615,12 +631,6 @@ for (prop in wshPrototype) {
   xmlashPrototype[prop] = wshPrototype[prop];
 }
 
-var xmlash = new Xmlash({
-  caretInterval: 500
-});
-var history = new WshHistory(xmlash);
-xmlash.render();
-xmlash.handleHelp();
-xmlash.initDatasources();
-
-})();
+Xmlash.prototype = xmlashPrototype;
+exports.Pash = Xmlash;
+})(typeof(exports) === "object" ? exports : window);
