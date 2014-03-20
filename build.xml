@@ -3,6 +3,9 @@
         Pash
     </description>
 
+  <property name="biserver" location="/home/roland/pentaho-ce/5.0/biserver-ce"/>
+  <property name="pentaho-solutions" location="${biserver}/pentaho-solutions"/>
+  <property name="pentaho-solutions-system" location="${pentaho-solutions}/system"/>
   <property name="bin" location="bin"/>
   
   <target name="init">
@@ -21,12 +24,17 @@
       <file file="plugin.xml"/>
       <file file="version.xml"/>
     </copy>
-    <copydir src="css" dest="${bin}/${ant.project.name}/css"/>
+    <copydir src="css" dest="${bin}/${ant.project.name}/css"/>  
+    <get verbose="true" src="https://raw.github.com/rpbouman/xmla4js/master/src/Xmla.js" dest="js/Xmla.js"/>
     <copydir src="js" dest="${bin}/${ant.project.name}/js"/>
     <copydir src="html" dest="${bin}/${ant.project.name}/html"/>
     <delete file="${bin}/${ant.project.name}.zip"/>
     <zip destfile="${bin}/${ant.project.name}.zip" basedir="${bin}"/>
     <delete dir="${bin}/${ant.project.name}"/>
+  </target>
+
+  <target name="deploy" depends="dist">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-solutions-system}"/>
   </target>
 
 </project>
