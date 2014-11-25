@@ -221,13 +221,15 @@ var Wsh;
         break;
       case 9:
         this.focus();
-        if (typeof(this.tabHandler) === "function") {
-          this.tabHandler();
-        }
       default:
         this.updateText();
         break;
     }
+    this.fireEvent("textChanged", {
+      text: textarea.value,
+      position: this.getCaretPosition(),
+      keyCode: keyCode
+    });
   },
   getCaretPosition: function () {
     var el = this.getTextArea();
@@ -303,6 +305,7 @@ var Wsh;
     });
     this.alignDom();
     this.updateCaretPosition();
+    this.currentLine = line;
     return line;
   },
   alignDom: function(){
@@ -321,6 +324,7 @@ var Wsh;
     return lines[index];
   },
   getCurrentLine: function() {
+    if (this.currentLine) return this.currentLine;
     var lines = this.getLines();
     return lines[lines.length - 1];
   },
@@ -365,7 +369,16 @@ var Wsh;
     var caretPosition = this.getCaretPosition();
     var prompt = this.getLinePrompt();
     var caret = this.getCaret();
-    caret.style.left = (prompt.offsetWidth + (caretPosition * caret.offsetWidth)) + "px";
+    var line = this.getCurrentLine();
+    var text = line.getElementsByTagName("SPAN")[1];
+    var string = text.textContent || text.innerText;
+    var head = string.substr(0, caretPosition);
+    var tail = string.substr(caretPosition);
+    text.innerHTML = this.escapeHTML(head);
+    caret.style.left = text.offsetLeft + text.offsetWidth + "px";
+    caret.style.top = "0px";
+    text.innerHTML = this.escapeHTML(string);
+
     var textArea = this.getTextArea();
     var style = textArea.style;
     style.top = (caret.parentNode.offsetTop + caret.parentNode.clientHeight) + "px";
@@ -376,6 +389,7 @@ var Wsh;
     style.left = (caret.offsetLeft + caret.clientWidth) + "px";
     //textArea.scrollIntoView(true);
     textArea.focus();
+    this.fireEvent("caretPositionChanged", caret);
   }
 };
 Wsh.id = 0;

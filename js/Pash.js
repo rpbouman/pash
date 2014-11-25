@@ -1,60 +1,11 @@
 (function(exports) {
 
-//http://en.wikipedia.org/wiki/Levenshtein_distance
-function levenstein(s1, l1, s2, l2) {
-  if (l1 == 0) return l2;
-  if (l2 == 0) return l1;
- 
-  /* test if last characters of the strings match */
-  var cost = (s1[l1 - 1] == s2[l2 - 1]) ? 0 : 1;
- 
-  /* return minimum of delete char from s, delete char from t, and delete char from both */
-  return Math.min(
-    levenstein(s1, l1 - 1, s2, l2    ) + 1,
-    levenstein(s1, l1,     s2, l2 - 1) + 1,
-    levenstein(s1, l1 - 1, s2, l2 - 1) + cost
-  );  
-}
-
-function editDistance(a, b){
-  if(a.length == 0) return b.length; 
-  if(b.length == 0) return a.length; 
- 
-  var matrix = [];
- 
-  // increment along the first column of each row
-  var i;
-  for(i = 0; i <= b.length; i++){
-    matrix[i] = [i];
-  }
- 
-  // increment each column in the first row
-  var j;
-  for(j = 0; j <= a.length; j++){
-    matrix[0][j] = j;
-  }
- 
-  // Fill in the rest of the matrix
-  for(i = 1; i <= b.length; i++){
-    for(j = 1; j <= a.length; j++){
-      if(b.charAt(i-1) == a.charAt(j-1)){
-        matrix[i][j] = matrix[i-1][j-1];
-      } else {
-        matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, // substitution
-                                Math.min(matrix[i][j-1] + 1, // insertion
-                                         matrix[i-1][j] + 1)); // deletion
-      }
-    }
-  }
- 
-  return matrix[b.length][a.length];
-};
-
 var Xmlash = function(conf){
   Wsh.apply(this, arguments);
+  this.tokenizer = new exports.PashTokenizer();
   this.prompt = "";
   this.statementLines = [];
-  var xmlaUrl = document.location.href; 
+  var xmlaUrl = document.location.href;
   var i = xmlaUrl.indexOf("/content");
   xmlaUrl = xmlaUrl.substr(0, i);
   xmlaUrl += "/Xmla";
@@ -113,28 +64,14 @@ var Xmlash = function(conf){
   this.initDatasources();
 };
 xmlashPrototype = {
-  //      1     2     34         5          678                9    10                     11           12                    13
-  regex: /(\s+)|(\w+)|(("[^"]*")|('[^']*'))|(((\/\/|--)[^\n]*)|(\/\*([^\*]|\*[^\/])*\*\/))|(\[[^\]]+\])|([\.,\*\-\+\(\):<>=])|(;)/g,
-  tokenTypes: {
-    1: "whitespace",
-    2: "identifier",
-    3: "string",
-    4: "double quoted string",
-    5: "singe quoted string",
-    6: "comment",
-    7: "comment line",
-    8: false,
-    9: "comment block",
-    10: false,
-    11: "square braces",
-    12:"operator",
-    13: "terminator"
-  },
   leaveLineHandler: function(){
     var text = this.getLineText().textContent + "\n";
-    var token, terminator = false, afterTerminator = false, prompt;
-    this.tokenize(text);
-    while (token = this.nextToken()) {
+    var tokenizer = this.tokenizer, token,
+        terminator = false, afterTerminator = false,
+        prompt
+    ;
+    tokenizer.tokenize(text);
+    while (token = tokenizer.nextToken()) {
       if (terminator) afterTerminator = true;
       if (token.type === "terminator") {
         terminator = true;
@@ -144,6 +81,7 @@ xmlashPrototype = {
     if (terminator) {
       this.prompt = "pash> ";
       if (afterTerminator) {
+        this.fireEvent("error");
         this.error("Tokens found after statement terminator.");
       }
       else {
@@ -154,22 +92,32 @@ xmlashPrototype = {
       this.prompt = "   -> ";
     }
   },
+  getFullStatementText: function(){
+    return this.getEnteredStatementText() + "\n" + this.getTextAreaText();
+  },
+  getEnteredStatementText: function(){
+    return this.statementLines.join("\n");
+  },
   handleCommand: function(){
-    var statement = this.statementLines.join("\n");
+    var statement = this.getEnteredStatementText();
     statement = statement.substr(0, statement.lastIndexOf(";"));
     var tree = this.parse(statement);
-    this.tokens.length = 0;
-    this.currentToken = -1;
+    this.tokenizer.reset();
     this.statementLines.length = 0;
+    this.fireEvent("commandHandled");
   },
   handleUse: function(){
     var me = this;
-    var token = this.nextToken();
-    if (token && (token.type === "double quoted string" || token.type === "single quoted string")) {
+    var token = this.tokenizer.nextToken(), tokenType = token.type;
+    if (  token &&
+        ( tokenType === "double quoted string" ||
+          tokenType === "single quoted string"
+        )
+    ) {
       token.type = "identifier";
       token.text = token.text.substr(1, token.text.length - 2);
-    } 
-    if (!token || token.type !== "identifier") {
+    }
+    if (!token || tokenType !== "identifier") {
       this.error("Expected a catalog name.");
       return;
     }
@@ -192,7 +140,7 @@ xmlashPrototype = {
             var message = "", num = 0;
             rowset.eachRow(function(row){
               var c2 = row.CATALOG_NAME.toUpperCase();
-              if (editDistance(c1, c2) < 5) {
+              if (exports.levenstein(c1, c2) < 5) {
                 if (message.length) message += ", "
                 message += "\"" + row.CATALOG_NAME + "\"";
                 num++;
@@ -267,7 +215,7 @@ xmlashPrototype = {
     }
   },
   handleShow: function(){
-    var me = this, token, func;
+    var me = this, tokenizer = me.tokenizer, token, func;
     var keywords = {
       CATALOGS: "discoverDBCatalogs",
       CUBES: "discoverMDCubes",
@@ -278,17 +226,17 @@ xmlashPrototype = {
       MEMBERS: "discoverMDMembers",
       PROPERTIES: "discoverMDProperties"
     };
-    if (!this.hasMoreTokens() || typeof(func = keywords[(token = this.nextToken()).text.toUpperCase()])!=="string") {
-    
+    if (!tokenizer.hasMoreTokens() || typeof(func = keywords[(token = tokenizer.nextToken()).text.toUpperCase()])!=="string") {
+
       this.error(
-        "<br/>Unrecognized command argument \"" + token.text + "\"" + 
+        "<br/>Unrecognized command argument \"" + token.text + "\"" +
         "<br/>Expected one of the following instead: CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, LEVELS, MEASURES, MEMBERS, PROPERTIES.",
         true
       );
       return;
     }
-    if (this.hasMoreTokens()) {
-      this.error("Extra token \"" + this.nextToken().text + "\" appearing after command argument", true);
+    if (tokenizer.hasMoreTokens()) {
+      this.error("Extra token \"" + tokenizer.nextToken().text + "\" appearing after command argument", true);
       return;
     }
     var catalog, request = this.xmlaRequest;
@@ -318,18 +266,18 @@ xmlashPrototype = {
                 "https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell" +
                 "</a>",
   handleHelp: function(){
-    var token, text, message = "";
-    while (this.hasMoreTokens()){
-      token = this.nextToken();
-      if (!token.text){
-        debugger;
+    var me = this, tokenizer = me.tokenizer, token, text, message = "";
+    while (tokenizer.hasMoreTokens()){
+      token = tokenizer.nextToken();
+      if (!token || !token.text){
+        //debugger;
         continue;
       }
       text = token.text.toUpperCase();
       switch (text) {
         case "HELP":
-          message += "<br/>Type HELP &lt;commmand&gt; to get help about a specific shell command." + 
-                     "<br/>Valid values for &lt;commmand&gt; are HELP, SHOW, and USE." + 
+          message += "<br/>Type HELP &lt;commmand&gt; to get help about a specific shell command." +
+                     "<br/>Valid values for &lt;commmand&gt; are HELP, SHOW, and USE." +
                      "<br/>Check out the tutorial:" +
                      "<br/>" + this.tutorialLine
           ;
@@ -338,7 +286,7 @@ xmlashPrototype = {
           message += "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
                      "<br/>Valid values for &lt;item&gt; are CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, MEASURES, MEMBERS and PROPERTIES." +
                      "<br/>"+
-                    "<br/>SHOW CATALOGS always lists all available catalogs." + 
+                    "<br/>SHOW CATALOGS always lists all available catalogs." +
                     "<br/>For all other items, you first have to select a particular catalog with the USE command."
           ;
           break;
@@ -349,7 +297,7 @@ xmlashPrototype = {
           ;
           break;
         default:
-          message += "<br/>Unrecognized command: \"" + token.text + "\"."; 
+          message += "<br/>Unrecognized command: \"" + token.text + "\".";
       }
     }
     if (!message.length) {
@@ -361,12 +309,12 @@ xmlashPrototype = {
                 "<br/>Refer to the MDX specification for more information about writing MDX queries." +
                 "<br/>" +
                 "<br/>Check out the tutorial here:" +
-                "<br/>" + this.tutorialLine                
+                "<br/>" + this.tutorialLine
     }
     this.writeResult(message + "<br/>", true);
   },
   renderDataset: function (dataset) {
-//    try{ 
+//    try{
       var me = this, axisCount = dataset.axisCount(),
           cellset = dataset.getCellset(),
           cellIndex = 0;
@@ -504,77 +452,28 @@ xmlashPrototype = {
     };
     this.xmla.execute(request);
   },
-  hasMoreTokens: function(){
-    return this.tokens ? this.currentToken < this.tokens.length : false;
-  },
-  nextToken: function(){
-    var token = null;
-    var ignoreTokens = {
-      whitespace: true,
-      "comment line": true,
-      "comment block": true,
-    };
-    while (this.hasMoreTokens()) {
-      token = this.tokens[this.currentToken++];
-      if (ignoreTokens[token.type]) {
-        token = null;
-        continue;
-      }
-      break; 
-    }
-    return token;
-  },
   parse: function(statement){
-    var re = this.getRegex();
-    this.tokenize(statement);
-    var token = this.nextToken();
+    var me = this, tokenizer = me.tokenizer;
+    tokenizer.tokenize(statement);
+    var token = tokenizer.nextToken();
     if (!token) return;
     switch (token.text.toUpperCase()) {
       case "SELECT":
       case "WITH":
-        this.handleExecute();
+        me.handleExecute();
         break;
       case "SHOW":
-        this.handleShow();
+        me.handleShow();
         break;
       case "USE":
-        this.handleUse();
+        me.handleUse();
         break;
       case "HELP":
-        this.handleHelp();
+        me.handleHelp();
         break;
       default:
-        this.error("Unrecognized command: " + token.text, true);
+        me.error("Unrecognized command: " + token.text, true);
     }
-  },
-  getRegex: function(){
-    var flags = "";
-    if (this.regex.global) flags += "g"
-    if (this.regex.ignoreCase) flags += "i"
-    return new RegExp(this.regex.source, flags);
-  },
-  tokenize: function(text){
-    var re = this.getRegex();
-    var match, token, i, n, num = 0;
-    var type, tokens = [];
-    while (match = re.exec(text)){
-      num++;
-      //ignore whitespace and comments
-      if (match[0] === ";" && typeof(terminator) === "undefined") {
-        terminator = num;
-        terminatorColumn = re.lastIndex;
-      }
-      token = {text: match[0], index: re.lastIndex};
-      for (i = match.length - 1; i >= 0; i--){
-        if(match[i] && (type = this.tokenTypes[i])) {
-          token.type = type;
-          break;
-        }
-      }
-      tokens.push(token);
-    }
-    this.tokens = tokens;
-    this.currentToken = 0;
   },
   writeResult: function(result, append){
     var line = this.getCurrentLine();
@@ -608,12 +507,17 @@ xmlashPrototype = {
         });
       },
       error: function(){
-        win.parent.mantle_showMessage(
+        window.parent.mantle_showMessage(
           "Error discovering datasources",
           "An error occurred when attempting to find XML/A datasources." +
-          "This maybe due to a misconfiguration of one of your cubes." +
-          "See http://jira.pentaho.com/browse/MONDRIAN-1056 for more details."
-        )
+          "<br/>Verify that the \"EnableXmla\" data source parameter of your Analysis datasources is set to \"true\"." +
+          //"<br/>You can edit data source parameters in the <a href=\"javascript:window.top.pho.showDatasourceManageDialog(window.top.datasourceEditorCallback)\">\"Manage Datasources\"</a> dialog." +
+          "<br/>Alternatively, this error may be due to a misconfiguration of one of your mondrian schemas." +
+          "<br/>See <a href=\"http://jira.pentaho.com/browse/MONDRIAN-1056\">http://jira.pentaho.com/browse/MONDRIAN-1056</a> for more details."
+        );
+        me.createLine();
+        this.prompt = "pash> ";
+        me.createLine("", this.prompt);
       }
     });
   },

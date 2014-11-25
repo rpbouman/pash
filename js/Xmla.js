@@ -15,19 +15,19 @@
 
     Include this in your web-pages for debug and development purposes only.
     For production purposes, consider using the minified/obfuscated versions in the /js directory.
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+    
+        http://www.apache.org/licenses/LICENSE-2.0
+    
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    
 */
 /**
 *
@@ -4454,7 +4454,6 @@ and  <code><a href="#property_responseXML">responseXML</a></code> properties.
 *   Invokes the <code><a href="#method_discover">discover()</a></code> method using
 *   <code><a href="#property_MDSCHEMA_PROPERTIES"></a></code> as value for the <code>requestType</code>,
 *   and retrieves the <code>MDSCHEMA_PROPERTIES</code> schema rowset.
-*   ...todo...
 *   The rowset has the following columns:
 *   <table border="1" class="schema-rowset">
 *       <tr>
@@ -4463,6 +4462,182 @@ and  <code><a href="#property_responseXML">responseXML</a></code> properties.
 *           <th>Description</th>
 *           <th>Restriction</th>
 *           <th>Nullable</th>
+*       </tr>
+*       <tr>
+*           <td>CATALOG_NAME</td>
+*           <td>string</td>
+*           <td>The name of the database.</td>
+*           <td>Yes</td>
+*           <td>No</td>
+*       </tr>
+*       <tr>
+*           <td>SCHEMA_NAME</td>
+*           <td>string</td>
+*           <td>The name of the schema to which this property belongs. NULL if the provider does not support schemas.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>CUBE_NAME</td>
+*           <td>string</td>
+*           <td>The name of the cube.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>DIMENSION_UNIQUE_NAME</td>
+*           <td>string</td>
+*           <td>The unique name of the dimension. For providers that generate unique names by qualification, each component of this name is delimited.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>HIERARCHY_UNIQUE_NAME</td>
+*           <td>string</td>
+*           <td>The unique name of the hierarchy. For providers that generate unique names by qualification, each component of this name is delimited.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>LEVEL_UNIQUE_NAME</td>
+*           <td>string</td>
+*           <td>The unique name of the level to which this property belongs. If the provider does not support named levels, it should return the DIMENSION_UNIQUE_NAME value for this field. For providers that generate unique names by qualification, each component of this name is delimited.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>MEMBER_UNIQUE_NAME</td>
+*           <td>string</td>
+*           <td>The unique name of the member to which the property belongs. Used for data stores that do not support named levels or have properties on a member-by-member basis. If the property applies to all members in a level, this column is NULL. For providers that generate unique names by qualification, each component of this name is delimited.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>PROPERTY_TYPE</td>
+*           <td>int</td>
+*           <td>A bitmap that specifies the type of the property:
+*             <dl>
+*               <dt>MDPROP_MEMBER (1)</dt><dd>identifies a property of a member. This property can be used in the DIMENSION PROPERTIES clause of the SELECT statement.</dd>
+*               <dt>MDPROP_CELL (2)</dt><dd>identifies a property of a cell. This property can be used in the CELL PROPERTIES clause that occurs at the end of the SELECT statement.</dd>
+*               <dt>MDPROP_SYSTEM (4)</dt><dd>identifies an internal property.</dd>
+*               <dt>MDPROP_BLOB (8)</dt><dd>identifies a property which contains a binary large object (blob).</dd>
+*             </dl>
+*           </td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>PROPERTY_NAME</td>
+*           <td>string</td>
+*           <td>The name of the property. If the key for the property is the same as the name for the property, PROPERTY_NAME will be blank.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>PROPERTY_CAPTION</td>
+*           <td>string</td>
+*           <td>A label or caption associated with the property, used primarily for display purposes. Returns PROPERTY_NAME if a caption does not exist.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>DATA_TYPE</td>
+*           <td>int</td>
+*           <td>The data type of the property.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>CHARACTER_MAXIMUM_LENGTH</td>
+*           <td>int</td>
+*           <td>The maximum possible length of the property, if it is a character, binary, or bit type. Zero indicates there is no defined maximum length. Returns NULL for all other data types.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>CHARACTER_OCTET_LENGTH</td>
+*           <td>int</td>
+*           <td>The maximum possible length (in bytes) of the property, if it is a character or binary type. Zero indicates there is no defined maximum length. Returns NULL for all other data types.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>NUMERIC_PRECISION</td>
+*           <td>int</td>
+*           <td>The maximum precision of the property, if it is a numeric data type. Returns NULL for all other data types.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>NUMERIC_SCALE</td>
+*           <td>int</td>
+*           <td>The number of digits to the right of the decimal point, if it is a DBTYPE_NUMERIC or DBTYPE_DECIMAL type. Returns NULL for all other data types.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>DESCRIPTION</td>
+*           <td>string</td>
+*           <td>A human readable description of the property. NULL if no description exists.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>PROPERTY_CONTENT_TYPE</td>
+*           <td>int</td>
+*           <td>The type of the property. Can be one of the following enumerations:
+*           </td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>SQL_COLUMN_NAME</td>
+*           <td>string</td>
+*           <td>The name of the property used in SQL queries from the cube dimension or database dDimension.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>LANGUAGE</td>
+*           <td>int</td>
+*           <td>The translation expressed as an LCID. Only valid for property translations.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>PROPERTY_ORIGIN</td>
+*           <td>int</td>
+*           <td>Identifies the type of hierarchy that the property applies to:</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>PROPERTY_ATTRIBUTE_HIERARCHY_NAME</td>
+*           <td>string</td>
+*           <td>The name of the attribute hierarchy sourcing this property.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>PROPERTY_CARDINALITY</td>
+*           <td>string</td>
+*           <td>The cardinality of the property. Possible values include the following strings: ONE or MANY</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>MIME_TYPE</td>
+*           <td>string</td>
+*           <td>The mime type for binary large objects (BLOBs).</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
+*       </tr>
+*       <tr>
+*           <td>PROPERTY_IS_VISIBLE</td>
+*           <td>boolean</td>
+*           <td>A Boolean that indicates whether the property is visible. TRUE if the property is visible; otherwise, FALSE.</td>
+*           <td>Yes</td>
+*           <td>Yes</td>
 *       </tr>
 *   </table>
 *   @method discoverMDProperties
@@ -4885,6 +5060,194 @@ Xmla.Rowset.MDMEMBER_TYPE_MEASURE = 4;
 *   @default 0
 */
 Xmla.Rowset.MDMEMBER_TYPE_UNKNOWN = 0;
+
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from SUM.
+*   @property MDMEASURE_AGGR_SUM
+*   @static
+*   @final
+*   @type int
+*   @default 1
+*/
+Xmla.Rowset.MDMEASURE_AGGR_SUM = 1;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from COUNT.
+*   @property MDMEASURE_AGGR_COUNT
+*   @static
+*   @final
+*   @type int
+*   @default 2
+*/
+Xmla.Rowset.MDMEASURE_AGGR_COUNT = 2;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from MIN.
+*   @property MDMEASURE_AGGR_MIN
+*   @static
+*   @final
+*   @type int
+*   @default 3
+*/
+Xmla.Rowset.MDMEASURE_AGGR_MIN = 3;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from MAX.
+*   @property MDMEASURE_AGGR_MAX
+*   @static
+*   @final
+*   @type int
+*   @default 4
+*/
+Xmla.Rowset.MDMEASURE_AGGR_MAX = 4;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from AVG.
+*   @property MDMEASURE_AGGR_AVG
+*   @static
+*   @final
+*   @type int
+*   @default 5
+*/
+Xmla.Rowset.MDMEASURE_AGGR_AVG = 5;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from VAR.
+*   @property MDMEASURE_AGGR_VAR
+*   @static
+*   @final
+*   @type int
+*   @default 6
+*/
+Xmla.Rowset.MDMEASURE_AGGR_VAR = 6;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from STDEV.
+*   @property MDMEASURE_AGGR_STD
+*   @static
+*   @final
+*   @type int
+*   @default 7
+*/
+Xmla.Rowset.MDMEASURE_AGGR_STD = 7;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from DISTINCT COUNT.
+*   @property MDMEASURE_AGGR_DST
+*   @static
+*   @final
+*   @type int
+*   @default 8
+*/
+Xmla.Rowset.MDMEASURE_AGGR_DST = 8;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from NONE.
+*   @property MDMEASURE_AGGR_NONE
+*   @static
+*   @final
+*   @type int
+*   @default 9
+*/
+Xmla.Rowset.MDMEASURE_AGGR_NONE = 9;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from AVERAGEOFCHILDREN.
+*   @property MDMEASURE_AGGR_AVGCHILDREN
+*   @static
+*   @final
+*   @type int
+*   @default 10
+*/
+Xmla.Rowset.MDMEASURE_AGGR_AVGCHILDREN = 10;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from FIRSTCHILD.
+*   @property MDMEASURE_AGGR_FIRSTCHILD
+*   @static
+*   @final
+*   @type int
+*   @default 11
+*/
+Xmla.Rowset.MDMEASURE_AGGR_FIRSTCHILD = 11;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from LASTCHILD.
+*   @property MDMEASURE_AGGR_LASTCHILD
+*   @static
+*   @final
+*   @type int
+*   @default 12
+*/
+Xmla.Rowset.MDMEASURE_AGGR_LASTCHILD = 12;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from FIRSTNONEMPTY.
+*   @property MDMEASURE_AGGR_FIRSTNONEMPTY
+*   @static
+*   @final
+*   @type int
+*   @default 13
+*/
+Xmla.Rowset.MDMEASURE_AGGR_FIRSTNONEMPTY = 13;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from LASTNONEMPTY.
+*   @property MDMEASURE_AGGR_LASTNONEMPTY
+*   @static
+*   @final
+*   @type int
+*   @default 14
+*/
+Xmla.Rowset.MDMEASURE_AGGR_LASTNONEMPTY = 14;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*   identifies that the measure aggregates from BYACCOUNT.
+*   @property MDMEASURE_AGGR_BYACCOUNT
+*   @static
+*   @final
+*   @type int
+*   @default 15
+*/
+Xmla.Rowset.MDMEASURE_AGGR_BYACCOUNT = 15;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*    identifies that the measure was derived from a formula that was not any single function above.
+*   @property MDMEASURE_AGGR_CALCULATED
+*   @static
+*   @final
+*   @type int
+*   @default 127
+*/
+Xmla.Rowset.MDMEASURE_AGGR_CALCULATED = 127;
+/**
+*   A possible value for the <code>MEASURE_AGGREGATOR</code> column of the
+*   <code>MDSCHEMA_MEASURES</code> rowset (see: <code><a href="Xmla.html#method_discoverMDMeasures">discoverMDMeasures()</a></code>),
+*    identifies that the measure was derived from an unknown aggregation function or formula.
+*   @property MDMEASURE_AGGR_UNKNOWN
+*   @static
+*   @final
+*   @type int
+*   @default 0
+*/
+Xmla.Rowset.MDMEASURE_AGGR_UNKNOWN = 0;
 
 Xmla.Rowset.KEYS = {};
 Xmla.Rowset.KEYS[Xmla.DBSCHEMA_CATALOGS] = ["CATALOG_NAME"];
@@ -5961,7 +6324,8 @@ Xmla.Dataset.prototype = {
     },
 /**
 *   Reset this object so it can be used again.
-*   @reset
+*   @method reset
+*   @return void
 */
     reset: function(){
       if (this._cellset) this._cellset.reset();
@@ -5975,6 +6339,7 @@ Xmla.Dataset.prototype = {
 /**
 *   Cleanup this Dataset object.
 *   @method close
+*   @return void
 */
     close: function(){
         if (this._slicer) this._slicer.close();
@@ -6049,6 +6414,18 @@ Xmla.Dataset.Axis.MDDISPINFO_DRILLED_DOWN = 65536;
 Xmla.Dataset.Axis.MDDISPINFO_SAME_PARENT_AS_PREV = 131072;
 
 Xmla.Dataset.Axis.prototype = {
+/**
+*   The 0-based id of the axis.
+*   @property id
+*   @type int
+*/
+    id: -1,
+/**
+*   The name of the axis.
+*   @property name
+*   @type string
+*/
+    name: null,
     _dataset: null,
     _tuples: null,
     _members: null,

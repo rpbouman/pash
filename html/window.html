@@ -5,15 +5,20 @@
     <title>XML/A Shell</title>
     <link rel="stylesheet" type="text/css" href="../css/wsh.css" />
     <link rel="stylesheet" type="text/css" href="../css/xmlash.css" />
+    <link rel="stylesheet" type="text/css" href="../css/autocomplete.css" />
   </head>
   <body>
     <script type="text/javascript" src="../js/Xmla.js"></script>
-    <script type="text/javascript" src="../js/wsh.js"></script>
-    <script type="text/javascript" src="../js/xmlash.js"></script>
+    <script type="text/javascript" src="../js/levenstein.js"></script>
+    <script type="text/javascript" src="../js/Wsh.js"></script>
+    <script type="text/javascript" src="../js/PashTokenizer.js"></script>
+    <script type="text/javascript" src="../js/Pash.js"></script>
+    <script type="text/javascript" src="../js/PashAutoComplete.js"></script>
     <script type="text/javascript">
-      new Pash({
+      var pash = new Pash({
         caretInterval: 500
       });
+      //var pashAutoComplete = new PashAutoComplete(pash);
     </script>
   </body>
 </html>

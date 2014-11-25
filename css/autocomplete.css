@@ -1,0 +1,17 @@
+div.pash-autocomplete-list {
+  position: absolute;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 7em;
+  border-style: solid;
+  border-width: 1px;
+  border-color: whitesmoke;
+  z-index: 1;
+  background-color: white;
+  padding-right: 1em;
+}
+
+div.pash-autocomplete-list > div.selected {
+  color: white;
+  background-color: lightblue;
+}

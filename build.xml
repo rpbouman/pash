@@ -3,11 +3,18 @@
         Pash
     </description>
 
-  <property name="biserver" location="/home/roland/pentaho-ce/5.0/biserver-ce"/>
+  <property name="biserver" location="/home/roland/pentaho-ce/biserver-ce-5.2.0.0-209/biserver-ce"/>
   <property name="pentaho-solutions" location="${biserver}/pentaho-solutions"/>
   <property name="pentaho-solutions-system" location="${pentaho-solutions}/system"/>
   <property name="bin" location="bin"/>
-  
+  <property name="browser" value="chromium-browser"/>
+  <property name="sleep"          value="2"/>
+  <property name="bihost"           value="localhost"/>
+  <property name="biport"           value="8080"/>
+  <property name="biuser"           value="admin"/>
+  <property name="bipasswd"         value="password"/>
+  <property name="bihome"           value="http://${bihost}:${biport}/pentaho?userid=${biuser}&amp;password=${bipasswd}"/>
+
   <target name="init">
     <!-- Create the time stamp -->
     <tstamp/>
@@ -24,10 +31,21 @@
       <file file="plugin.xml"/>
       <file file="version.xml"/>
     </copy>
-    <copydir src="css" dest="${bin}/${ant.project.name}/css"/>  
-    <get verbose="true" src="https://raw.github.com/rpbouman/xmla4js/master/src/Xmla.js" dest="js/Xmla.js"/>
-    <copydir src="js" dest="${bin}/${ant.project.name}/js"/>
-    <copydir src="html" dest="${bin}/${ant.project.name}/html"/>
+
+    <copy todir="${bin}/${ant.project.name}/css">
+      <fileset dir="css" includes="**"/>
+    </copy>
+
+    <get verbose="true" src="https://raw.githubusercontent.com/rpbouman/xmla4js/master/src/Xmla.js" dest="js/Xmla.js"/>
+
+    <copy todir="${bin}/${ant.project.name}/js">
+      <fileset dir="js" includes="**"/>
+    </copy>
+
+    <copy todir="${bin}/${ant.project.name}/html">
+      <fileset dir="html" includes="**"/>
+    </copy>
+
     <delete file="${bin}/${ant.project.name}.zip"/>
     <zip destfile="${bin}/${ant.project.name}.zip" basedir="${bin}"/>
     <delete dir="${bin}/${ant.project.name}"/>
@@ -35,6 +53,24 @@
 
   <target name="deploy" depends="dist">
     <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-solutions-system}"/>
+  </target>
+
+  <target name="startup" depends="shutdown">
+    <echo message="Sleeping for ${sleep} seconds to allow the server to shutdown."/>
+    <sleep seconds="${sleep}"/>
+    <exec executable="${biserver}/start-pentaho.sh" spawn="true"/>
+  </target>
+
+  <target name="shutdown">
+    <exec executable="${biserver}/stop-pentaho.sh" spawn="true"/>
+  </target>
+
+  <target name="launch" depends="deploy,startup">
+    <echo message="Sleeping for ${sleep} seconds to allow the server to startup."/>
+    <sleep seconds="${sleep}"/>
+    <exec executable="${browser}" spawn="true">
+      <arg value="${bihome}"/>
+    </exec>
   </target>
 
 </project>
