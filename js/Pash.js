@@ -224,13 +224,14 @@ xmlashPrototype = {
       LEVELS: "discoverMDLevels",
       MEASURES: "discoverMDMeasures",
       MEMBERS: "discoverMDMembers",
-      PROPERTIES: "discoverMDProperties"
+      PROPERTIES: "discoverMDProperties",
+      SETS: "discoverMDSets"
     };
     if (!tokenizer.hasMoreTokens() || typeof(func = keywords[(token = tokenizer.nextToken()).text.toUpperCase()])!=="string") {
 
       this.error(
         "<br/>Unrecognized command argument \"" + token.text + "\"" +
-        "<br/>Expected one of the following instead: CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, LEVELS, MEASURES, MEMBERS, PROPERTIES.",
+        "<br/>Expected one of the following instead: CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, LEVELS, MEASURES, MEMBERS, PROPERTIES, SETS.",
         true
       );
       return;
@@ -284,7 +285,7 @@ xmlashPrototype = {
           break;
         case "SHOW":
           message += "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
-                     "<br/>Valid values for &lt;item&gt; are CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, MEASURES, MEMBERS and PROPERTIES." +
+                     "<br/>Valid values for &lt;item&gt; are CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, MEASURES, MEMBERS, PROPERTIES and SETS." +
                      "<br/>"+
                     "<br/>SHOW CATALOGS always lists all available catalogs." +
                     "<br/>For all other items, you first have to select a particular catalog with the USE command."
