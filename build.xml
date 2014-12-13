@@ -2,8 +2,10 @@
     <description>
         Pash
     </description>
-
+<!--
   <property name="biserver" location="/home/roland/pentaho-ce/biserver-ce-5.2.0.0-209/biserver-ce"/>
+-->
+  <property name="biserver" location="/home/roland/pentaho-ce/biserver-ce-5.3-1494/biserver-ce"/>
   <property name="pentaho-solutions" location="${biserver}/pentaho-solutions"/>
   <property name="pentaho-solutions-system" location="${pentaho-solutions}/system"/>
   <property name="bin" location="bin"/>
