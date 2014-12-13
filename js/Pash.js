@@ -227,10 +227,19 @@ xmlashPrototype = {
       PROPERTIES: "discoverMDProperties",
       SETS: "discoverMDSets"
     };
-    if (!tokenizer.hasMoreTokens() || typeof(func = keywords[(token = tokenizer.nextToken()).text.toUpperCase()])!=="string") {
+    var hasMoreTokens = tokenizer.hasMoreTokens();
+    var isString;
+    if (hasMoreTokens) {
+      var token = tokenizer.nextToken();
+      var keyWord = token.text;
+      keyWord = keyWord.toUpperCase();
+      var func = keywords[keyWord];
+      isString = typeof(func)!=="string";
+    }
+    if (!hasMoreTokens || isString) {
 
       this.error(
-        "<br/>Unrecognized command argument \"" + token.text + "\"" +
+        "<br/>Unrecognized command argument \"" + (token ? token.text : "") + "\"" +
         "<br/>Expected one of the following instead: CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, LEVELS, MEASURES, MEMBERS, PROPERTIES, SETS.",
         true
       );
@@ -240,6 +249,7 @@ xmlashPrototype = {
       this.error("Extra token \"" + tokenizer.nextToken().text + "\" appearing after command argument", true);
       return;
     }
+
     var catalog, request = this.xmlaRequest;
     if (func === "discoverDBCatalogs") {
       var catalog = request.properties.Catalog;
@@ -249,19 +259,29 @@ xmlashPrototype = {
       }
       delete request.properties.Catalog;
     }
-    else {
-      if (typeof(request.properties) === "undefined") {
-        request.properties = {};
-      }
-      if (typeof(request.properties.Catalog) === "undefined") {
-        this.error("No catalog selected. Please run the USE command to select a catalog.", true);
-        return;
-      }
+    else
+    if (!this.checkCatalogSet(request)) {
+      return;
     }
+
     request.success = function(xmla, request, rowset) {
       me.renderRowset(rowset);
     };
     this.xmla[func].call(this.xmla, request);
+  },
+  checkCatalogSet: function(request) {
+    if (typeof(request) === "undefined") {
+      request = this.xmlaRequest;
+    }
+    if (typeof(request.properties) === "undefined") {
+      request.properties = {};
+    }
+    var catalog = request.properties.Catalog;
+    if (typeof(catalog) === "undefined") {
+      this.error("No catalog selected. Please run the USE command to select a catalog.", true);
+      return false;
+    }
+    return catalog;
   },
   tutorialLine: "<a class=\"link\" target=\"_blank\" href=\"https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell\">" +
                 "https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell" +
@@ -465,6 +485,9 @@ xmlashPrototype = {
         break;
       case "SHOW":
         me.handleShow();
+        break;
+      case "TEST":
+        me.handleTest();
         break;
       case "USE":
         me.handleUse();
