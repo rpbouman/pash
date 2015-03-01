@@ -412,12 +412,10 @@ WshHistory.prototype = {
     switch (keyCode) {
       case 38:  //up arrow
         this.index++;
-        console.log(this.index);
         break;
       case 40:  //down arrow
         if (this.index) {
           this.index--;
-          console.log(this.index);
           l = 1;
         }
         break;
