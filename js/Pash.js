@@ -1,5 +1,10 @@
 (function(exports) {
 
+function escXml(str) {
+  if (str === null) return null;
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
 var Xmlash = function(conf){
   Wsh.apply(this, arguments);
   this.tokenizer = new exports.PashTokenizer();
@@ -356,18 +361,26 @@ xmlashPrototype = {
 
       function renderHeader(axis, dummy) {
           var thead = "<thead>";
-          var i = 0;
+          var rowAxis;
+          var i = 0, n = axis.hierarchyCount() - 1;
           axis.eachHierarchy(function(hierarchy){
             thead += "<tr>";
             if (!i && dataset.hasRowAxis()) {
-              var rowSpan = axis.hierarchyCount();
-              var rowAxis = dataset.getRowAxis();
+              var rowSpan = axis.hierarchyCount() - 1;
+              rowAxis = dataset.getRowAxis();
               var colSpan = rowAxis.hierarchyCount();
-              thead += "<td rowspan=\"" + rowSpan + "\" colspan=\"" + colSpan + "\"><br/></td>";
+              if (rowSpan) {
+                thead += "<td rowspan=\"" + rowSpan + "\" colspan=\"" + colSpan + "\"><br/></td>";
+              }
+            }
+            if (i === n && dataset.hasRowAxis()) {
+              rowAxis.eachHierarchy(function(hierarchy){
+                thead += "<th>" + escXml(hierarchy.name) + "</th>";
+              });
             }
             axis.eachTuple(function(tuple){
               var member = tuple.members[i];
-              thead += "<th>" + member.Caption + "</th>";
+              thead += "<th>" + escXml(member.Caption) + "</th>";
             });
             thead += "</tr>";
             i++;
@@ -404,7 +417,7 @@ xmlashPrototype = {
           i = 0;
           rowAxis.eachHierarchy(function(hierarchy){
             var member = tuple.members[i];
-            tbody += "<th>" + member.Caption + "</th>";
+            tbody += "<th>" + escXml(member.Caption) + "</th>";
             i++;
           });
           tbody += renderCells(columnAxis);
