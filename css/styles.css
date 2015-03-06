@@ -1,0 +1,54 @@
+html, body {
+  margin: 0px;
+  padding: 0px;
+}
+
+body {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+}
+
+table, td, th {
+  border-collapse: collapse;
+  border-color: black;
+  border-width: 1px;
+  padding: 2px .5em 2px .5em;
+}
+
+th {
+  font-weight: normal;
+}
+
+table {
+  margin: 1em;
+}
+table, thead td, thead th {
+  border-style: dashed;
+}
+tbody td, tbody th {
+  border-style: none dashed none dashed;
+}
+table.dataset > tbody > tr > td {
+  text-align: right;
+}
+table.dataset > tbody > tr > th {
+  text-align: left;
+}
+
+.wsh {
+  font-family: Courier, monospace;
+  font-size: 12pt;
+}
+
+.short, .unsignedShort, .unsignedInt, .int {
+  text-align: right;
+}
+
+.result {
+  padding: .2em;
+}
