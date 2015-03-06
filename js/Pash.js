@@ -1,8 +1,10 @@
 (function(exports) {
 
 function escXml(str) {
-  if (str === null) return null;
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  if (str === null) {
+    return null;
+  }
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 var Xmlash = function(conf){
@@ -187,7 +189,7 @@ xmlashPrototype = {
             className = className.substr(className.lastIndexOf(":") + 1);
           }
           cols += "<col class=\"" + className + "\"/>";
-          thead += "<th>" + fieldDef.label + "</th>";
+          thead += "<th>" + escXml(fieldDef.label) + "</th>";
         }
         thead = "<thead><tr>" + thead + "</tr></thead>";
         while (rowset.hasMoreRows()){
@@ -202,13 +204,13 @@ xmlashPrototype = {
             if (className === "dateTime" && typeof(field)==="number") {
               field = new Date(field);
             }
-            tbody += "<td class=\"" + className + "\">" + field + "</td>";
+            tbody += "<td class=\"" + className + "\">" + escXml(field) + "</td>";
           }
           tbody = "<tr>" + tbody + "</tr>";
           rowset.nextRow();
         }
         tbody = "<tbody>" + tbody + "</tbody>";
-        result = "<table>" + cols + thead + tbody + "</table>";
+        result = "<table class=\"rowset\">" + cols + thead + tbody + "</table>";
       }
       else {
         result = "No rows to display.";
@@ -424,7 +426,7 @@ xmlashPrototype = {
           tbody += "</tr>";
         });
         tbody += "</tbody>";
-        me.writeResult("<table>" + thead + tbody + "</table>");
+        me.writeResult("<table class=\"dataset\">" + thead + tbody + "</table>");
       }
 
       function renderAxis(axisId) {
@@ -438,11 +440,13 @@ xmlashPrototype = {
                   break;
               case 0:
                   me.writeResult(
-                    "<table>" +
+                    "<table class=\"dataset\">" +
                         renderHeader(axis, false) +
-                         "<tr>" +
+                        "<tbody>" +
+                          "<tr>" +
                             renderCells(axis) +
-                         "</tr>" +
+                          "</tr>" +
+                        "</tbody>" +
                     "</table>"
                   );
                   break;
