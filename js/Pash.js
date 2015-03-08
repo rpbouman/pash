@@ -4,7 +4,7 @@ function escXml(str) {
   if (str === null) {
     return null;
   }
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 var Xmlash = function(conf){
@@ -244,10 +244,16 @@ xmlashPrototype = {
       isString = typeof(func)!=="string";
     }
     if (!hasMoreTokens || isString) {
-
+      var keyword, list = "";
+      for (keyword in keywords) {
+        if (list) {
+          list += ", ";
+        }
+        list += keyword;
+      }
       this.error(
         "<br/>Unrecognized command argument \"" + (token ? token.text : "") + "\"" +
-        "<br/>Expected one of the following instead: CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, LEVELS, MEASURES, MEMBERS, PROPERTIES, SETS.",
+        "<br/>Expected one of the following instead: " + list + ".",
         true
       );
       return;
