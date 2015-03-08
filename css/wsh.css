@@ -1,3 +1,7 @@
+html, body {
+  overlow: hidden;
+}
+
 .wsh {
   position: absolute;
   overflow: auto;
@@ -12,11 +16,7 @@
   white-space: pre;
   background-color: white;
   color: black;
-  /*
-  * Make sure the h. scrollbar doesn't mask the bottom line
-  */
-  padding-bottom: 1em;
-  margin-bottom: -1em;
+  margin-right: 1em;
 }
 
 .wsh-textarea {
