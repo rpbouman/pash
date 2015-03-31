@@ -400,7 +400,7 @@ xmlashPrototype = {
       function renderCells(axis) {
           var td = "";
           axis.eachTuple(function(){
-              if (cellset.cellOrdinal() === cellIndex++) {
+              if (cellset.cellOrdinal() === cellIndex++ && cellset.cellValue) {
                   value = cellset.cellValue();
                   cellset.nextCell();
               }
