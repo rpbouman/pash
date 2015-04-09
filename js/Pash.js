@@ -159,7 +159,15 @@ xmlashPrototype = {
         i++;
       });
       if (i !== 1) {
-        request.error(xmla, request, "Could not set catalog");
+        var msg;
+        if (i === 0) {
+          msg = "No such catalog";
+        }
+        else {
+          msg = "Unexpected error setting catalog";
+        }
+        me.error(msg + " \"" + token.text + "\".");
+        request.error(xmla, request);
       }
     }
     request.error = function(){
