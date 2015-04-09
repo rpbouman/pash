@@ -15,7 +15,6 @@ var Xmlash = function(conf){
   this.xmlaRequest = {
     //forceResponseXMLEmulation: true,
     async: true,
-    url: xmlaUrl,
     properties: {
     },
     restrictions: {
@@ -44,15 +43,23 @@ var Xmlash = function(conf){
         var exception = request.exception, code, desc;
         code = exception.code;
         desc = exception.message;
-        this.error(desc + " (" + code + ")");
-        try { //try to extract code and desc, these are passed by mondrian and often contain the actual information.
-          var xml = request.xhr.responseXML;
-          var code = xml.getElementsByTagName("code")[0].firstChild.data;
-          var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
-          this.error(desc + " (" + code + ")");
+        if (
+          request.method === Xmla.METHOD_DISCOVER &&
+          request.requestType === Xmla.DISCOVER_DATASOURCES
+        ) {
+          console.log("Error discovering datasource: " + code + ": " + desc);
         }
-        catch (e) {
-          //no extra info
+        else {
+          this.error(desc + " (" + code + ")");
+          try { //try to extract code and desc, these are passed by mondrian and often contain the actual information.
+            var xml = request.xhr.responseXML;
+            var code = xml.getElementsByTagName("code")[0].firstChild.data;
+            var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
+            this.error(desc + " (" + code + ")");
+          }
+          catch (e) {
+            //no extra info
+          }
         }
         this.blockInput(false);
       },
@@ -650,6 +657,68 @@ xmlashPrototype = {
         me.createLine("", me.prompt);
       }
     });
+  },
+  initDatasources: function(){
+    switch (arguments.length) {
+      case 0:
+        var location = document.location, urls = [];
+
+        if (location.search) {
+          var search = location.search.substr(1); //get rid of initial ? char.
+          search = search.split("&"); //cut in individual parameters;
+          var i, n = search.length, param;
+          for (i = 0; i < n; i++) {
+            param = search[i];
+            param = param.split("=");
+            if (param[0].toUpperCase() !== "XMLAURL") {
+              continue;
+            }
+            urls.push(decodeURIComponent(param[1]));
+            break;
+          }
+        }
+        if (!urls.length) {
+          var base = location.origin + "/";
+          //mondrian, f.e. http://localhost:8080/mondrian/xmla
+          urls.push(base + "mondrian/xmla");
+          //jasperreports, f.e. http://localhost:8080/jasperserver/xmla
+          urls.push(base + "jasperserver/xmla");
+          //icCube, f.e. http://localhost:8080/icCube/xmla
+          urls.push(base + "icCube/xmla");
+          //pentaho, f.e. http://localhost:8080/pentaho/Xmla
+          urls.push(base + location.pathname.split("/")[1] + "/Xmla");
+        }
+        this.initDatasources(urls, 0);
+        break;
+      case 2:
+        var urls = arguments[0], index = arguments[1];
+        if (index >= urls.length) {
+          showAlert(
+            "Error discovering datasources",
+            "Unable to find the XML/A service. Try specifying the URL of the XML/A service using the \"XmlaUrl\" URL query parameter."
+          );
+          return;
+        }
+        var me = this;
+        this.xmla.discoverDataSources({
+          url: urls[index],
+          success: function(xmla, request, rowset){
+            rowset.eachRow(function(row){
+              me.writeResult("Connected to datasource " + row.DataSourceName + ".", "");
+              me.xmlaRequest.properties.DataSourceInfo = row.DataSourceInfo;
+              me.xmlaRequest.url = request.url
+              me.createLine();
+              me.prompt = me.defaultPrompt;
+              me.createLine("", me.prompt);
+            });
+          },
+          error: function(xmla, request){
+            me.initDatasources(urls, ++index);
+          }
+        });
+        break;
+      default:
+    }
   },
   getXmla: function(){
     return this.xmla;
