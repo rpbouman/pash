@@ -7,7 +7,7 @@
         <menuitem
           id="pash"
           label="Pentaho Analysis Shell"
-          command="mantleXulHandler.openUrl('Analysis Shell', 'Analysis Shell', 'content/pash/html/window.html')"
+          command="mantleXulHandler.openUrl('Analysis Shell', 'Analysis Shell', 'content/pash/html/index.html')"
         />
       </menubar>
     </overlay>

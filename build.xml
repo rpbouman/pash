@@ -51,6 +51,10 @@
       <fileset dir="html" includes="**"/>
     </copy>
 
+    <copy todir="${bin}/${ant.project.name}/images">
+      <fileset dir="images" includes="**"/>
+    </copy>
+
     <delete file="${bin}/${ant.project.name}.zip"/>
     <zip destfile="${bin}/${ant.project.name}.zip" basedir="${bin}"/>
     <delete dir="${bin}/${ant.project.name}"/>
