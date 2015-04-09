@@ -12,10 +12,6 @@ var Xmlash = function(conf){
   this.tokenizer = new exports.PashTokenizer();
   this.prompt = "";
   this.statementLines = [];
-  var xmlaUrl = document.location.href;
-  var i = xmlaUrl.indexOf("/content");
-  xmlaUrl = xmlaUrl.substr(0, i);
-  xmlaUrl += "/Xmla";
   this.xmlaRequest = {
     //forceResponseXMLEmulation: true,
     async: true,
@@ -44,15 +40,19 @@ var Xmlash = function(conf){
     },
     {
       events: Xmla.EVENT_ERROR,
-      handler: function(xmla, request){
-        try {
+      handler: function(xmla, request, exception){
+        var exception = request.exception, code, desc;
+        code = exception.code;
+        desc = exception.message;
+        this.error(desc + " (" + code + ")");
+        try { //try to extract code and desc, these are passed by mondrian and often contain the actual information.
           var xml = request.xhr.responseXML;
           var code = xml.getElementsByTagName("code")[0].firstChild.data;
           var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
           this.error(desc + " (" + code + ")");
         }
         catch (e) {
-          debugger;
+          //no extra info
         }
         this.blockInput(false);
       },
@@ -60,8 +60,8 @@ var Xmlash = function(conf){
     }
   ]);
   this.lines = [
-    "Pentaho Analysis shell powered by Xmla4js.",
-    "Copyright 2014 Roland Bouman.",
+    "MDX shell powered by Xmla4js.",
+    "Copyright 2014, 2015 Roland Bouman.",
     "This program is open source.",
   ];
   this.addListener("leaveLine", this.leaveLineHandler, this);
@@ -70,7 +70,15 @@ var Xmlash = function(conf){
   this.handleHelp();
   this.initDatasources();
 };
+
 xmlashPrototype = {
+  defaultPrompt: "MDX> ",
+  getContinuationPrompt: function() {
+    if (!this.continuationPrompt) {
+      this.continuationPrompt = this.defaultPrompt.replace(/\w/g, " ").replace(/ >/g, "->");
+    }
+    return this.continuationPrompt;
+  },
   leaveLineHandler: function(){
     var text = this.getLineText().textContent + "\n";
     var tokenizer = this.tokenizer, token,
@@ -86,7 +94,7 @@ xmlashPrototype = {
     }
     this.statementLines.push(text);
     if (terminator) {
-      this.prompt = "pash> ";
+      this.prompt = this.defaultPrompt;
       if (afterTerminator) {
         this.fireEvent("error");
         this.error("Tokens found after statement terminator.");
@@ -96,7 +104,7 @@ xmlashPrototype = {
       }
     }
     else {
-      this.prompt = "   -> ";
+      this.prompt = this.getContinuationPrompt();
     }
   },
   getFullStatementText: function(){
@@ -118,57 +126,68 @@ xmlashPrototype = {
     var token = this.tokenizer.nextToken(), tokenType = token.type;
     if (  token &&
         ( tokenType === "double quoted string" ||
-          tokenType === "single quoted string"
+          tokenType === "single quoted string" ||
+          tokenType === "square braces"
         )
     ) {
-      token.type = "identifier";
+      tokenType = token.type = "identifier";
       token.text = token.text.substr(1, token.text.length - 2);
     }
-    if (!token || tokenType !== "identifier") {
+    if (!token || token.type !== "identifier") {
       this.error("Expected a catalog name.");
       return;
     }
     var request = me.xmlaRequest;
     var oldCatalog = request.properties.Catalog;
-    request.properties.Catalog = token.text;
-    me.xmla.discoverDBCatalogs({
-      success: function(xmla, request, rowset){
-        rowset.eachRow(function(row){
-          me.catalog = row.CATALOG_NAME;
-          me.writeResult("Current catalog set to \"" + me.catalog + "\".");
-          this.prompt = "pash> ";
-        });
-      },
-      error: function(){
-        delete request.properties.Catalog;
-        var c1 = token.text.toUpperCase();
-        me.xmla.discoverDBCatalogs({
-          success: function(xmla, request, rowset){
-            var message = "", num = 0;
-            rowset.eachRow(function(row){
-              var c2 = row.CATALOG_NAME.toUpperCase();
-              if (exports.levenstein(c1, c2) < 5) {
-                if (message.length) message += ", "
-                message += "\"" + row.CATALOG_NAME + "\"";
-                num++;
-              }
-            });
-            if (num) {
-              me.writeResult(
-                "Perhaps you meant"  +
-                (num > 1 ? " one of" : "") +
-                ": " + message + "?"
-              );
-            }
-            request.properties.Catalog = oldCatalog;
-          },
-          error: function(){
-            request.properties.Catalog = oldCatalog;
-          }
-        });
-        request.properties.Catalog = oldCatalog;
+    request.restrictions.CATALOG_NAME = request.properties.Catalog = token.text;
+    request.success = function(xmla, request, rowset){
+      var i = 0;
+      rowset.eachRow(function(row){
+        if (i){
+          throw "Unexpected error setting catalog (multiple catalogs found)";
+        }
+        me.catalog = row.CATALOG_NAME;
+        me.writeResult("Current catalog set to \"" + me.catalog + "\".");
+        this.prompt = this.defaultPrompt;
+        i++;
+      });
+      if (i !== 1) {
+        request.error(xmla, request, "Could not set catalog");
       }
-    });
+    }
+    request.error = function(){
+      delete request.properties.Catalog;
+      delete request.restrictions.CATALOG_NAME;
+      var c1 = token.text.toUpperCase();
+      me.xmla.discoverDBCatalogs({
+        success: function(xmla, request, rowset){
+          var message = "", num = 0;
+          rowset.eachRow(function(row){
+            var c2 = row.CATALOG_NAME.toUpperCase();
+            if (exports.levenstein(c1, c2) < 5) {
+              if (message.length) {
+                message += ", "
+              }
+              message += "\"" + row.CATALOG_NAME + "\"";
+              num++;
+            }
+          });
+          if (num) {
+            me.writeResult(
+              "Perhaps you meant"  +
+              (num > 1 ? " one of" : "") +
+              ": " + message + "?"
+            );
+          }
+          request.properties.Catalog = oldCatalog;
+        },
+        error: function(){
+          request.properties.Catalog = oldCatalog;
+        }
+      });
+      request.properties.Catalog = oldCatalog;
+    }
+    me.xmla.discoverDBCatalogs(request);
   },
   renderRowset: function(rowset, fieldNames) {
     try {
@@ -221,6 +240,57 @@ xmlashPrototype = {
       this.error(e);
     }
   },
+  parseWhereClause: function(){
+    var restrictions = {}, tokenizer = this.tokenizer;
+    if (!tokenizer.hasMoreTokens()) {
+      return restrictions;
+    }
+    var token, left, relop, right, expect = "WHERE";
+    do {
+      //get WHERE or AND
+      token = tokenizer.nextToken();
+      if (token.type !== "identifier" || String(token.text).toUpperCase() !== expect) {
+        throw "Expected keyword: " + expect + ". found: " + token.type + " \"" + token.text + "\"";
+      }
+      expect = "AND";
+
+      //get left
+      if (!tokenizer.hasMoreTokens()) {
+        throw "Unexpected end of statement. Expected: expression.";
+      }
+      token = tokenizer.nextToken();
+      if (token.type !== "identifier") {
+        throw "Expected: identifier, found: " + token.type + " \"" + token.text + "\"";
+      }
+      left = token;
+
+      //get relop
+      if (!tokenizer.hasMoreTokens()) {
+        throw "Unexpected end of statement. Expected: =";
+      }
+      token = tokenizer.nextToken();
+      if (token.type !== "operator" || token.text !== "=") {
+        throw "Expected: =, found: " + token.type + " \"" + token.text + "\"";
+      }
+      relop = token;
+
+      //get right
+      if (!tokenizer.hasMoreTokens()) {
+        throw "Unexpected end of statement. Expected: string value.";
+      }
+      token = tokenizer.nextToken();
+      if (
+        token.type !== "double quoted string" &&
+        token.type !== "single quoted string"
+      ) {
+        throw "Expected: string value, found: " + token.type + " \"" + token.text + "\"";
+      }
+      right = token;
+
+      restrictions[String(left.text).toUpperCase()] = right.text.substr(1, right.text.length - 2);
+    } while (tokenizer.hasMoreTokens());
+    return restrictions;
+  },
   handleShow: function(){
     var me = this, tokenizer = me.tokenizer, token, func;
     var keywords = {
@@ -258,27 +328,33 @@ xmlashPrototype = {
       );
       return;
     }
-    if (tokenizer.hasMoreTokens()) {
-      this.error("Extra token \"" + tokenizer.nextToken().text + "\" appearing after command argument", true);
-      return;
+    var restrictions = this.parseWhereClause();
+    var request = this.xmlaRequest;
+    var catalog = request.properties.Catalog;
+    if (catalog) {
+      restrictions.CATALOG_NAME = catalog;
     }
-
-    var catalog, request = this.xmlaRequest;
+    else {
+      delete restrictions.CATALOG_NAME;
+    }
+    request.restrictions = restrictions;
     if (func === "discoverDBCatalogs") {
-      var catalog = request.properties.Catalog;
       request.callback = function(){
         request.properties.Catalog = catalog;
         delete request.callback;
       }
       delete request.properties.Catalog;
+      delete request.restrictions.CATALOG_NAME;
     }
     else
     if (!this.checkCatalogSet(request)) {
       return;
     }
-
     request.success = function(xmla, request, rowset) {
       me.renderRowset(rowset);
+    };
+    request.error = function(xmla, request, exception) {
+      me.error("Unexpected error.");
     };
     this.xmla[func].call(this.xmla, request);
   },
@@ -500,26 +576,33 @@ xmlashPrototype = {
     var me = this, tokenizer = me.tokenizer;
     tokenizer.tokenize(statement);
     var token = tokenizer.nextToken();
-    if (!token) return;
-    switch (token.text.toUpperCase()) {
-      case "SELECT":
-      case "WITH":
-        me.handleExecute();
-        break;
-      case "SHOW":
-        me.handleShow();
-        break;
-      case "TEST":
-        me.handleTest();
-        break;
-      case "USE":
-        me.handleUse();
-        break;
-      case "HELP":
-        me.handleHelp();
-        break;
-      default:
-        me.error("Unrecognized command: " + token.text, true);
+    if (!token) {
+      return;
+    }
+    try {
+      switch (token.text.toUpperCase()) {
+        case "SELECT":
+        case "WITH":
+          me.handleExecute();
+          break;
+        case "SHOW":
+          me.handleShow();
+          break;
+        case "TEST":
+          me.handleTest();
+          break;
+        case "USE":
+          me.handleUse();
+          break;
+        case "HELP":
+          me.handleHelp();
+          break;
+        default:
+          me.error("Unrecognized command: " + token.text, true);
+      }
+    }
+    catch (e) {
+      me.error(typeof(e) === "string" ? e : e.getMessage(), true);
     }
   },
   writeResult: function(result, append){
@@ -549,22 +632,22 @@ xmlashPrototype = {
           me.writeResult("Connected to datasource " + row.DataSourceName + ".", "");
           me.xmlaRequest.properties.DataSourceInfo = row.DataSourceInfo;
           me.createLine();
-          this.prompt = "pash> ";
-          me.createLine("", this.prompt);
+          me.prompt = me.defaultPrompt;
+          me.createLine("", me.prompt);
         });
       },
       error: function(){
-        window.parent.mantle_showMessage(
+        showAlert(
           "Error discovering datasources",
-          "An error occurred when attempting to find XML/A datasources." +
+          "An error occurred when attempting to find XML/A datasources." + (typeof(top.pho) === "undefined" ? "" :
           "<br/>Verify that the \"EnableXmla\" data source parameter of your Analysis datasources is set to \"true\"." +
           //"<br/>You can edit data source parameters in the <a href=\"javascript:window.top.pho.showDatasourceManageDialog(window.top.datasourceEditorCallback)\">\"Manage Datasources\"</a> dialog." +
           "<br/>Alternatively, this error may be due to a misconfiguration of one of your mondrian schemas." +
-          "<br/>See <a href=\"http://jira.pentaho.com/browse/MONDRIAN-1056\">http://jira.pentaho.com/browse/MONDRIAN-1056</a> for more details."
+          "<br/>See <a href=\"http://jira.pentaho.com/browse/MONDRIAN-1056\">http://jira.pentaho.com/browse/MONDRIAN-1056</a> for more details.")
         );
         me.createLine();
-        this.prompt = "pash> ";
-        me.createLine("", this.prompt);
+        me.prompt = me.defaultPrompt;
+        me.createLine("", me.prompt);
       }
     });
   },

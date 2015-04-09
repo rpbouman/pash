@@ -3,9 +3,9 @@
         Pash
     </description>
 <!--
-  <property name="biserver" location="/home/roland/pentaho-ce/biserver-ce-5.2.0.0-209/biserver-ce"/>
+  <property name="biserver" location="/home/roland/pentaho-ce/biserver-ce-5.2/biserver-ce"/>
 -->
-  <property name="biserver" location="/home/roland/pentaho-ce/biserver-ce-5.3-1494/biserver-ce"/>
+  <property name="biserver" location="/home/roland/pentaho-ce/biserver-ce-5.2-GA-209/biserver-ce"/>
   <property name="pentaho-solutions" location="${biserver}/pentaho-solutions"/>
   <property name="pentaho-solutions-system" location="${pentaho-solutions}/system"/>
   <property name="bin" location="bin"/>
@@ -17,11 +17,14 @@
   <property name="bipasswd"         value="password"/>
   <property name="bihome"           value="http://${bihost}:${biport}/pentaho?userid=${biuser}&amp;password=${bipasswd}"/>
 
+  <property name="jasper.webapps.dir"  location="/home/roland/jasperreports-server-cp-6.0.1/apache-tomcat/webapps"/>
+
+  <property name="icCube.dir"  location="/home/roland/icCube-4.8.2"/>
+  <property name="icCube.web.dir"  location="${icCube.dir}/web"/>
+
   <target name="init">
     <!-- Create the time stamp -->
     <tstamp/>
-    <!-- Create the build directory structure used by compile -->
-    <mkdir dir="${build}"/>
   </target>
 
   <target name="dist" description="generate the distribution" >
@@ -57,6 +60,18 @@
     <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-solutions-system}"/>
   </target>
 
+  <target name="deploy-iccube" depends="dist" description="deploy distribution">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${icCube.web.dir}"/>
+  </target>
+
+  <target name="deploy-jasper" depends="dist" description="deploy distribution">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${jasper.webapps.dir}"/>
+  </target>
+
+  <target name="undeploy" description="undeploy distribution">
+    <delete dir="${pentaho-solutions-system}/${ant.project.name}"/>
+  </target>
+
   <target name="startup" depends="shutdown">
     <echo message="Sleeping for ${sleep} seconds to allow the server to shutdown."/>
     <sleep seconds="${sleep}"/>
@@ -73,6 +88,10 @@
     <exec executable="${browser}" spawn="true">
       <arg value="${bihome}"/>
     </exec>
+  </target>
+
+  <target name="clean" description="clean up" >
+    <delete dir="${bin}/${ant.project.name}"/>
   </target>
 
 </project>

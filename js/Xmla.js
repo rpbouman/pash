@@ -101,7 +101,9 @@ if (typeof(require)==="function") _createXhr = function(){
             }
             options.method = "POST";//method;
             options.headers = {};
-            if (username) options.headers.Authorization = "Basic " + (new Buffer(username + ":" + (password || ""))).toString("base64");
+            if (username) {
+              options.headers.Authorization = "Basic " + (new Buffer(username + ":" + (password || ""))).toString("base64");
+            }
             this.options = options;
             this.changeStatus(-1, 1);
         },
@@ -171,10 +173,14 @@ function _ajax(options){
             handlerCalled = true;
             switch (xhr.readyState){
                 case 0:
-                    if (_isFun(options.aborted)) options.aborted(xhr);
+                    if (_isFun(options.aborted)) {
+                      options.aborted(xhr);
+                    }
                     break;
                 case 4:
-                    if (xhr.status === 200) options.complete(xhr)
+                    if (xhr.status === 200) {
+                      options.complete(xhr)
+                    }
                     else {
                         var err = Xmla.Exception._newError(
                                 "HTTP_ERROR",
@@ -196,7 +202,9 @@ function _ajax(options){
 
     xhr = _createXhr();
     args = ["POST", options.url, options.async];
-    if (options.username && options.password) args = args.concat([options.username, options.password]);
+    if (options.username && options.password) {
+      args = args.concat([options.username, options.password]);
+    }
     xhr.open.apply(xhr, args);
     //see http://www.w3.org/TR/XMLHttpRequest/#the-timeout-attribute
     if (!_isUnd(options.requestTimeout) && (options.async || !(window && window.document))) {
@@ -205,9 +213,15 @@ function _ajax(options){
     xhr.onreadystatechange = handler;
     xhr.setRequestHeader("Accept", "text/xml, application/xml, application/soap+xml");
     xhr.setRequestHeader("Content-Type", "text/xml");
-    if (headers = options.headers) for (header in headers) xhr.setRequestHeader(header, headers[header]);
+    if (headers = options.headers) {
+      for (header in headers) {
+        xhr.setRequestHeader(header, headers[header]);
+      }
+    }
     xhr.send(options.data);
-    if (!options.async && !handlerCalled) handler.call(xhr);
+    if (!options.async && !handlerCalled) {
+      handler.call(xhr);
+    }
     return xhr;
 };
 
@@ -486,7 +500,12 @@ function _xjs(xml) {
           apos: "'",
           quot: "\""
         })[g2];
-        if (!v) throw "Illegal named entity: " + g2;
+        if (v) {
+          return v;
+        }
+        else {
+          throw "Illegal named entity: " + g2;
+        }
       }
       else {
         return String.fromCharCode(g4, g3 ? 16: 10);
@@ -1553,7 +1572,9 @@ Xmla.prototype = {
 *   @return {DOMDocument}
 */
     getResponseXML: function(){
-        if (_isObj(this.responseXML)) return this.responseXML;
+        if (_isObj(this.responseXML)) {
+          return this.responseXML;
+        }
         return (this.responseXML = _xjs(this.responseText));
     },
 /**
@@ -2025,9 +2046,15 @@ Xmla.prototype = {
                         },
             url: options.url
         };
-        if (options.username) ajaxOptions.username = options.username;
-        if (options.password) ajaxOptions.password = options.password;
-        if (options.headers) ajaxOptions.headers = options.headers;
+        if (options.username) {
+          ajaxOptions.username = options.username;
+        }
+        if (options.password) {
+          ajaxOptions.password = options.password;
+        }
+        if (options.headers) {
+          ajaxOptions.headers = options.headers;
+        }
 
         if (this._fireEvent(Xmla.EVENT_REQUEST, options, true) && (
             (options.method == Xmla.METHOD_DISCOVER && this._fireEvent(Xmla.EVENT_DISCOVER, options)) ||
@@ -2042,7 +2069,9 @@ Xmla.prototype = {
     },
     _requestSuccess: function(request) {
         var xhr = request.xhr, response;
-        if (request.forceResponseXMLEmulation !== true) this.responseXML = xhr.responseXML;
+        if (request.forceResponseXMLEmulation !== true) {
+          this.responseXML = xhr.responseXML;
+        }
         this.responseText = xhr.responseText;
 
         var method = request.method;
@@ -3988,6 +4017,18 @@ and  <code><a href="#property_responseXML">responseXML</a></code> properties.
 *           <td>int</td>
 *           <td>Type of the level:
 *                <ul>
+*                   <li>MDLEVEL_TYPE_REGULAR (0x0000)</li>
+*                   <li>MDLEVEL_TYPE_ALL (0x0001)</li>
+*                   <li>MDLEVEL_TYPE_TIME_YEARS (0x0014)</li>
+*                   <li>MDLEVEL_TYPE_TIME_HALF_YEAR (0x0024)</li>
+*                   <li>MDLEVEL_TYPE_TIME_QUARTERS (0x0044)</li>
+*                   <li>MDLEVEL_TYPE_TIME_MONTHS (0x0084)</li>
+*                   <li>MDLEVEL_TYPE_TIME_WEEKS (0x0104)</li>
+*                   <li>MDLEVEL_TYPE_TIME_DAYS (0x0204)</li>
+*                   <li>MDLEVEL_TYPE_TIME_HOURS (0x0304)</li>
+*                   <li>MDLEVEL_TYPE_TIME_MINUTES (0x0404)</li>
+*                   <li>MDLEVEL_TYPE_TIME_SECONDS (0x0804)</li>
+*                   <li>MDLEVEL_TYPE_TIME_UNDEFINED (0x1004)</li>
 *                   <li>MDLEVEL_TYPE_GEO_CONTINENT (0x2001)</li>
 *                   <li>MDLEVEL_TYPE_GEO_REGION (0x2002)</li>
 *                   <li>MDLEVEL_TYPE_GEO_COUNTRY (0x2003)</li>
@@ -4015,6 +4056,13 @@ and  <code><a href="#property_responseXML">responseXML</a></code> properties.
 *                   <li>MDLEVEL_TYPE_REPRESENTATIVE (0x1062)</li>
 *                   <li>MDLEVEL_TYPE_PROMOTION (0x1071)</li>
 *                </ul>
+*               Some of the OLE DB for OLAP values are as flags, and do not become values of the enumeration:
+*               <ul>
+*                   <li>MDLEVEL_TYPE_UNKNOWN (0x0000) signals that no other flags are set.</li>
+*                   <li>MDLEVEL_TYPE_CALCULATED (0x0002) indicates that the level is calculated.</li>
+*                   <li>MDLEVEL_TYPE_TIME (0x0004) indicates that the level is time-related.</li>
+*                   <li>MDLEVEL_TYPE_RESERVED1 (0x0008) is reserved for future use.</li>
+*               </ul>
 *           <td>No</td>
 *           <td>Yes</td>
 *       <tr>
@@ -4027,14 +4075,30 @@ and  <code><a href="#property_responseXML">responseXML</a></code> properties.
 *       <tr>
 *           <td>CUSTOM_ROLLUP_SETTINGS</td>
 *           <td>int</td>
-*           <td>A bitmap that specifies the custom rollup options: MDLEVELS_CUSTOM_ROLLUP_EXPRESSION (0x01) indicates an expression exists for this level. (Deprecated) MDLEVELS_CUSTOM_ROLLUP_COLUMN (0x02) indicates that there is a custom rollup column for this level. MDLEVELS_SKIPPED_LEVELS (0x04) indicates that there is a skipped level associated with members of this level.MDLEVELS_CUSTOM_MEMBER_PROPERTIES (0x08) indicates that members of the level have custom member properties. MDLEVELS_UNARY_OPERATOR (0x10) indicates that members on the level have unary operators.</td>
+*           <td>A bitmap that specifies the custom rollup options:
+*             <ul>
+*               <li>MDLEVELS_CUSTOM_ROLLUP_EXPRESSION (0x01) indicates an expression exists for this level. (Deprecated)</li>
+*               <li>MDLEVELS_CUSTOM_ROLLUP_COLUMN (0x02) indicates that there is a custom rollup column for this level.</li>
+*               <li>MDLEVELS_SKIPPED_LEVELS (0x04) indicates that there is a skipped level associated with members of this level.</li>
+*               <li>MDLEVELS_CUSTOM_MEMBER_PROPERTIES (0x08) indicates that members of the level have custom member properties.</li>
+*               <li>MDLEVELS_UNARY_OPERATOR (0x10) indicates that members on the level have unary operators.</li>
+*             </ul>
+*           </td>
 *           <td>No</td>
 *           <td>Yes</td>
 *       </tr>
 *       <tr>
 *           <td>LEVEL_UNIQUE_SETTINGS</td>
 *           <td>int</td>
-*           <td>A bitmap that specifies which columns contain unique values, if the level only has members with unique names or keys. The Msmd.h file defines the following bit value constants for this bitmap: MDDIMENSIONS_MEMBER_KEY_UNIQUE (1) MDDIMENSIONS_MEMBER_NAME_UNIQUE (2)The key is always unique in Microsoft SQL Server 2005 Analysis Services (SSAS). The name will be unique if the setting on the attribute is UniqueInDimension or UniqueInAttribute</td>
+*           <td>A bitmap that specifies which columns contain unique values, if the level only has members with unique names or keys.
+*               The Msmd.h file defines the following bit value constants for this bitmap:
+*             <ul>
+*               <li>MDDIMENSIONS_MEMBER_KEY_UNIQUE (1)</li>
+*               <li>MDDIMENSIONS_MEMBER_NAME_UNIQUE (2)</li>
+*             </ul>
+*               The key is always unique in Microsoft SQL Server 2005 Analysis Services (SSAS).
+*               The name will be unique if the setting on the attribute is UniqueInDimension or UniqueInAttribute
+*           </td>
 *           <td>No</td>
 *           <td>Yes</td>
 *       </tr>
@@ -4774,6 +4838,9 @@ function _getComplexType(node, name){
 *   @param {Xmla} xmla The Xmla instance that created this Rowset. This is mainly used to allow the Rowset to access the options passed to the Xmla constructor.
 */
 Xmla.Rowset = function (node, requestType, xmla){
+    if (typeof(node) === "string"){
+      node = _xjs(node);
+    }
     this._node = node;
     this._type = requestType;
     this._xmla = xmla;
@@ -5992,6 +6059,9 @@ while (rowObject = rowset.fetchAsObject()){
 *   @param {DOMDocument} doc The responseXML result returned by server in response to a <code>Execute</code> request.
 */
 Xmla.Dataset = function(doc){
+    if (typeof(doc) === "string") {
+      doc = _xjs(doc);
+    }
     this._initDataset(doc);
     return this;
 }
@@ -6027,25 +6097,25 @@ Xmla.Dataset.AXIS_ROWS = 1;
 */
 Xmla.Dataset.AXIS_PAGES = 2;
 /**
-*   Can be used as argument for <code><a href="#method_getAxis">getAxis()</a></code> to get the fourth axis (the section axis).
-*   Alternatively you can simply call <code><a href="#method_getSectionAxis">getSectionAxis()</a></code>
-*   @property AXIS_SECTIONS
-*   @static
-*   @final
-*   @type int
-*   @default <code>3</code>
-*/
-Xmla.Dataset.AXIS_SECTIONS = 3;
-/**
 *   Can be used as argument for <code><a href="#method_getAxis">getAxis()</a></code> to get the fifth axis (the chapters axis).
 *   Alternatively you can simply call <code><a href="#method_getChapterAxis">getChapterAxis()</a></code>
 *   @property AXIS_CHAPTERS
 *   @static
 *   @final
 *   @type int
+*   @default <code>3</code>
+*/
+Xmla.Dataset.AXIS_CHAPTERS = 3;
+/**
+*   Can be used as argument for <code><a href="#method_getAxis">getAxis()</a></code> to get the fourth axis (the section axis).
+*   Alternatively you can simply call <code><a href="#method_getSectionAxis">getSectionAxis()</a></code>
+*   @property AXIS_SECTIONS
+*   @static
+*   @final
+*   @type int
 *   @default <code>4</code>
 */
-Xmla.Dataset.AXIS_CHAPTERS = 4;
+Xmla.Dataset.AXIS_SECTIONS = 4;
 /**
 *   Can be used as argument for <code><a href="#method_getAxis">getAxis()</a></code> to get the slicer axis
 *   (the axis that appears in the <code>WHERE</code> clause of an MDX-<code>SELECT</code> statement).
@@ -6232,24 +6302,7 @@ Xmla.Dataset.prototype = {
         return this.hasAxis(Xmla.Dataset.AXIS_PAGES);
     },
 /**
-*   Get the Section axis. This is the fourth axis, and has ordinal 3. If the section axis doesn't exist, an <code>INVALID_AXIS</code> exception is thrown.
-*   To prevent an exception from being thrown, you should call the <code><a href="#method_hasPageAxis">hasSectionAxis()</a></code> method to determine if the axis exists.
-*   @method getSectionAxis
-*   @return {Xmla.Dataset.Axis} The section <code><a href="Xmla.Dataset.Axis.html#class_Axis">Xmla.Dataset.Axis</a></code> object.
-*/
-    getSectionAxis: function(){
-        return this.getAxis(Xmla.Dataset.AXIS_SECTIONS);
-    },
-/**
-*   Determine if the section axis exists.
-*   @method hasSectionAxis
-*   @return {boolean} <code>true</code> if the section axis exists, <code>false</code> if it doesn't exist.
-*/
-    hasSectionAxis: function(){
-        return this.hasAxis(Xmla.Dataset.AXIS_SECTIONS);
-    },
-/**
-*   Get the Chapter axis. This is the fifth axis, and has ordinal 4. If the chapter axis doesn't exist, an <code>INVALID_AXIS</code> exception is thrown.
+*   Get the Chapter axis. This is the fourth axis, and has ordinal 3. If the chapter axis doesn't exist, an <code>INVALID_AXIS</code> exception is thrown.
 *   To prevent an exception from being thrown, you should call the <code><a href="#method_hasChapterAxis">hasChapterAxis()</a></code> method to determine if the axis exists.
 *   @method getChapterAxis
 *   @return {Xmla.Dataset.Axis} The chapter <code><a href="Xmla.Dataset.Axis.html#class_Axis">Xmla.Dataset.Axis</a></code> object.
@@ -6264,6 +6317,23 @@ Xmla.Dataset.prototype = {
 */
     hasChapterAxis: function(){
         return this.hasAxis(Xmla.Dataset.AXIS_CHAPTERS);
+    },
+/**
+*   Get the Section axis. This is the fifth axis, and has ordinal 4. If the section axis doesn't exist, an <code>INVALID_AXIS</code> exception is thrown.
+*   To prevent an exception from being thrown, you should call the <code><a href="#method_hasPageAxis">hasSectionAxis()</a></code> method to determine if the axis exists.
+*   @method getSectionAxis
+*   @return {Xmla.Dataset.Axis} The section <code><a href="Xmla.Dataset.Axis.html#class_Axis">Xmla.Dataset.Axis</a></code> object.
+*/
+    getSectionAxis: function(){
+        return this.getAxis(Xmla.Dataset.AXIS_SECTIONS);
+    },
+/**
+*   Determine if the section axis exists.
+*   @method hasSectionAxis
+*   @return {boolean} <code>true</code> if the section axis exists, <code>false</code> if it doesn't exist.
+*/
+    hasSectionAxis: function(){
+        return this.hasAxis(Xmla.Dataset.AXIS_SECTIONS);
     },
 /**
 *   Get the Slicer axis. This is the axis that appears in the <code>WHERE</code> clause of the MDX statement.
@@ -6359,9 +6429,11 @@ Xmla.Dataset.prototype = {
       cellset = this.getCellset();
       for (i = 0, n = tuples; i < n; i++){
           cell = cellset.readCell();
-          if (idx == cell.ordinal) {
+          if (idx === cell.ordinal) {
             cells.push(cell);
-            cellset.nextCell();
+            if (cellset.nextCell() === -1) {
+              break;
+            }
           } else {
             //console.debug('skipping: '+idx+':'+cell.ordinal);
             cells.push({Value:null, FmtValue:null, FormatString: null, ordinal:idx });
@@ -6431,11 +6503,71 @@ Xmla.Dataset.Axis = function(_dataset, _axisInfoNode, _axisNode, name, id){
     return this;
 }
 
+/**
+*   The name of the standard member property that contains the unique name for this member.
+*   See <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms725398%28v=vs.85%29.aspx">Ole DB standard</a> for more information.
+*   @property MEMBER_UNIQUE_NAME
+*   @static
+*   @final
+*   @type string
+*   @default Uname
+*/
 Xmla.Dataset.Axis.MEMBER_UNIQUE_NAME = "UName";
+/**
+*   The name of the standard member property that contains the caption for this member.
+*   See <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms725398%28v=vs.85%29.aspx">Ole DB standard</a> for more information.
+*   @property MEMBER_CAPTION
+*   @static
+*   @final
+*   @type string
+*   @default Caption
+*/
 Xmla.Dataset.Axis.MEMBER_CAPTION = "Caption";
+/**
+*   The name of the standard member property that contains the name of the level for this member.
+*   See <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms725398%28v=vs.85%29.aspx">Ole DB standard</a> for more information.
+*   @property MEMBER_LEVEL_NAME
+*   @static
+*   @final
+*   @type string
+*   @default LName
+*/
 Xmla.Dataset.Axis.MEMBER_LEVEL_NAME = "LName";
+/**
+*   The name of the standard member property that contains the number of the level for this member.
+*   See <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms725398%28v=vs.85%29.aspx">Ole DB standard</a> for more information.
+*   @property MEMBER_LEVEL_NUMBER
+*   @static
+*   @final
+*   @type string
+*   @default LNum
+*/
 Xmla.Dataset.Axis.MEMBER_LEVEL_NUMBER = "LNum";
+/**
+*   The name of the member property that contains displayinfo for this member.
+*   See <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms725398%28v=vs.85%29.aspx">Ole DB standard</a> for more information.
+*   @property MEMBER_DISPLAY_INFO
+*   @static
+*   @final
+*   @type string
+*   @default LNum
+*/
 Xmla.Dataset.Axis.MEMBER_DISPLAY_INFO = "DisplayInfo";
+/**
+*   The default mem ber properties for members
+*   See <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms725398%28v=vs.85%29.aspx">Ole DB standard</a> for more information.
+*   @property DefaultMemberProperties
+*   @static
+*   @final
+*   @type array
+*/
+Xmla.Dataset.Axis.DefaultMemberProperties = [
+  Xmla.Dataset.Axis.MEMBER_UNIQUE_NAME,
+  Xmla.Dataset.Axis.MEMBER_CAPTION,
+  Xmla.Dataset.Axis.MEMBER_LEVEL_NAME,
+  Xmla.Dataset.Axis.MEMBER_LEVEL_NUMBER,
+  Xmla.Dataset.Axis.MEMBER_DISPLAY_INFO
+];
 
 /**
 *   A constant that can be used as a bitmask for a member's <code>DisplayInfo</code> property.
@@ -6455,7 +6587,7 @@ Xmla.Dataset.Axis.MDDISPINFO_CHILDREN_CARDINALITY = 65535;
 *   @static
 *   @final
 *   @type int
-*   @default <code>1</code>
+*   @default <code>65536</code>
 */
 Xmla.Dataset.Axis.MDDISPINFO_DRILLED_DOWN = 65536;
 /**
@@ -6465,7 +6597,7 @@ Xmla.Dataset.Axis.MDDISPINFO_DRILLED_DOWN = 65536;
 *   @static
 *   @final
 *   @type int
-*   @default <code>1</code>
+*   @default <code>131072</code>
 */
 Xmla.Dataset.Axis.MDDISPINFO_SAME_PARENT_AS_PREV = 131072;
 
@@ -6527,7 +6659,9 @@ Xmla.Dataset.Axis.prototype = {
                 //of the property if it does not exist in a particular member
                 nodeName = propertyNode.nodeName;
                 properties[nodeName] = null;
-                if (memberProperties[nodeName]) continue;
+                if (memberProperties[nodeName]) {
+                  continue;
+                }
                 type = _getAttribute(propertyNode, "type");
                 memberProperties[nodeName] = {
                     converter: _typeConverterMap[type],
@@ -6700,7 +6834,9 @@ Xmla.Dataset.Axis.prototype = {
                 members: members
             }
         ;
-        for (i=0; i < n; i++) members.push(hierarchies[this._hierarchyOrder[i]] = this._member(i));
+        for (i=0; i < n; i++) {
+          members.push(hierarchies[this._hierarchyOrder[i]] = this._member(i));
+        }
         return tuple;
     },
 /**
@@ -6715,14 +6851,22 @@ Xmla.Dataset.Axis.prototype = {
 */
     eachTuple: function(callback, scope, args){
         var mArgs = [null];
-        if (!scope) scope = this;
+        if (!scope) {
+          scope = this;
+        }
         if (args) {
-            if (_isArr(args)) mArgs.concat(args)
-            else mArgs.push(args);
+            if (_isArr(args)) {
+              mArgs.concat(args)
+            }
+            else {
+              mArgs.push(args);
+            }
         }
         while (this.hasMoreTuples()){
             mArgs[0] = this.getTuple();
-            if (callback.apply(scope, mArgs) === false) return false;
+            if (callback.apply(scope, mArgs) === false) {
+              return false;
+            }
             this.nextTuple();
         }
         this._tupleIndex = 0;
@@ -6854,7 +6998,9 @@ Xmla.Dataset.Axis.prototype = {
 *   @return {object} The member of the current tuple that belongs to the specified hierarchy, If the argument is omitted the member that belongs current hierarchy is retrieved from the current tuple.
 */
     member: function(hierarchyIndexOrName){
-        if (_isUnd(hierarchyIndexOrName)) index = this._hierarchyIndex;
+        if (_isUnd(hierarchyIndexOrName)) {
+          index = this._hierarchyIndex;
+        }
         var index, hierarchyName;
         switch(typeof(hierarchyIndexOrName)){
             case "string":
@@ -7120,7 +7266,9 @@ Xmla.Dataset.Cellset.prototype = {
 */
     reset: function(idx){
         this._idx = idx ? idx : 0;
-        if (this.hasMoreCells()) this._getCellNode();
+        if (this.hasMoreCells()) {
+          this._getCellNode();
+        }
     },
 /**
 *   Check if there are cells to iterate through.
@@ -7222,42 +7370,6 @@ Xmla.Dataset.Cellset.prototype = {
     cellOrdinal: function() {
         return this._cellOrd;
     },
-/*
- *  TODO: check with andy if we can remove these.
- *  These methods only work for 2 dimensional sets.
- *  IMO now that we have methods to compute the ordinal based on tuple indexes, we don't need this anymore.
- *
-    fetchAsArrayOfValues: function(){
-        var colArray = [];
-
-        for (var c=0, cols=this._dataset.getAxis(Xmla.Dataset.AXIS_COLUMNS).numTuples;c<cols;c++){
-            colArray[colArray.length] = this.cellValue();
-            this.nextCell();
-        }
-        return colArray;
-    },
-    fetchAllAsArrayOfValues: function(){
-        var row, rows=[];
-        while((row = this.fetchAsArrayOfValues()) && (this.hasMoreCells())){
-            rows.push(row);
-        }
-        return rows;
-    },
-    eachRow: function(rowCallback, scope, args){
-        if (_isUnd(scope)) scope = this;
-        var mArgs = [null];
-        if (!_isUnd(args)) {
-            if (!_isArr(args)) args = [args];
-            mArgs = mArgs.concat(args);
-        }
-        var row, rows=[];
-        while((row = this.fetchAsArrayOfValues()) && (this.hasMoreCells())){
-            mArgs[0] = row;
-            if (rowCallback.apply(scope, mArgs)===false) return false;
-        }
-        return true;
-    },
-*/
     _readCell: function(node, object){
         var p, cellProp, cellProperty;
         for (p in this._cellProperties){
@@ -7280,7 +7392,9 @@ Xmla.Dataset.Cellset.prototype = {
 *   @return {object} An object that represents the current cell.
 */
     readCell: function(object) {
-        if (!object) object = {};
+        if (!object) {
+          object = {};
+        }
         return this._readCell(this._cellNode, object);
     },
 /**
@@ -7293,15 +7407,22 @@ Xmla.Dataset.Cellset.prototype = {
 */
     eachCell: function(callback, scope, args) {
         var mArgs = [null];
-        if (!scope) scope = this;
+        if (!scope) {
+          scope = this;
+        }
         if (args) {
-            if (!_isArr(args)) args = [args];
+            if (!_isArr(args)) {
+              args = [args];
+            }
             mArgs = mArgs.concat(args);
         }
-        while (this.hasMoreCells()){
-            this.nextCell();
+        var ord;
+        while (ord !== -1 && this.hasMoreCells()){
+            ord = this.nextCell();
             mArgs[0] = this.readCell();
-            if (callback.apply(scope, mArgs)===false) return false;
+            if (callback.apply(scope, mArgs)===false) {
+              return false;
+            }
         }
         this._idx = 0;
         return true;
@@ -7346,15 +7467,33 @@ Xmla.Dataset.Cellset.prototype = {
  *  @return {int} The physical index.
  */
     indexForOrdinal: function(ordinal){
-        var index = ordinal, cellOrdinal, node;
-        while(true) {
+        var index = ordinal,    //the index can at most be ordinal; less if there are missing (empty) cells
+            cellOrdinal, node
+        ;
+        while(index >= 0) {
+            //get the node at the current index
             node = this._cellNodes[index];
-            if (!node) node = this._cellNodes[this._cellNodes.length - 1];
+            //if we don't have a node here, it means there is at least one empty cell,
+            //iow there are less cells than theoretically possible cell ordinals.
+            if (!node) {
+              //if we don't have any cells at all, we bail out
+              if (this._cellNodes.length === 0) {
+                return -1;
+              }
+              //start scanning from the end of the collection of cells
+              node = this._cellNodes[this._cellNodes.length - 1];
+            }
             cellOrdinal = this._getCellOrdinal(node);
-            if (cellOrdinal === ordinal) return index;
+            if (cellOrdinal === ordinal) {
+              return index;
+            }
             else
-            if (cellOrdinal > ordinal) index--;
-            else return -1;
+            if (cellOrdinal > ordinal) {
+              index--;
+            }
+            else {
+              return -1;
+            }
         }
         return null;
     },

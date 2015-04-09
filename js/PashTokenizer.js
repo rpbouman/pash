@@ -12,14 +12,14 @@ PashTokenizer.prototype = {
     2: "identifier",
     3: "string",
     4: "double quoted string",
-    5: "singe quoted string",
+    5: "single quoted string",
     6: "comment",
     7: "comment line",
     8: false,
     9: "comment block",
     10: false,
     11: "square braces",
-    12:"operator",
+    12: "operator",
     13: "terminator"
   },
   reset: function(){
@@ -71,7 +71,7 @@ PashTokenizer.prototype = {
         token = null;
         continue;
       }
-      break; 
+      break;
     }
     return token;
   }
