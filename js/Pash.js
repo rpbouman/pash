@@ -412,7 +412,12 @@ xmlashPrototype = {
                      "<br/>Valid values for &lt;item&gt; are CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, MEASURES, MEMBERS, PROPERTIES and SETS." +
                      "<br/>"+
                     "<br/>SHOW CATALOGS always lists all available catalogs." +
-                    "<br/>For all other items, you first have to select a particular catalog with the USE command."
+                    "<br/>In order to SHOW something other than CATALOGS, you first need to select a particular catalog with the USE command." +
+                    "<br/>" +
+                    "<br/>SHOW commands can have an optional WHERE clause." +
+                    "<br/>For example, to see which measures are available in the 'Sales' cube, you'd write:" +
+                    "<br/>" +
+                    "<br/>SHOW MEASURES WHERE CUBE_NAME = 'Sales'"
           ;
           break;
         case "USE":
