@@ -706,7 +706,9 @@ xmlashPrototype = {
             rowset.eachRow(function(row){
               me.writeResult("Connected to datasource " + row.DataSourceName + ".", "");
               me.xmlaRequest.properties.DataSourceInfo = row.DataSourceInfo;
-              me.xmlaRequest.url = request.url
+              xmla.setOptions({
+                url: request.url
+              });
               me.createLine();
               me.prompt = me.defaultPrompt;
               me.createLine("", me.prompt);
