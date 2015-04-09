@@ -18,6 +18,7 @@
       <static-path url="/pash/css" localFolder="css"/>
       <static-path url="/pash/js" localFolder="js"/>
       <static-path url="/pash/html" localFolder="html"/>
+      <static-path url="/pash/images" localFolder="images"/>
   </static-paths>
 
 </plugin>
