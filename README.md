@@ -21,7 +21,7 @@ Pash was originally written for the Pentaho BI server, but can be used with any 
 
 Pash is available through the Pentaho marketplace. From within the server, open the marketplace, find the entry for Pentaho Analysis Shell, and click install. (Server restart required).
 
-If you like you can also manually deploy Pash. To do that, simply download the dist/Pash.zip package and unzip into pentaho-solutions/system beneath your Pentaho BI Server home directory.
+If you like you can also manually deploy Pash. To do that, simply download the bin/pash.zip package and unzip into pentaho-solutions/system beneath your Pentaho BI Server home directory.
 
 After the install, you can open Pash by clicking the "Pentaho Analysis Shell" menu item in the "Tools" menu.
 To open pash outside of the Pentaho user console, point your browser to http://localhost:8080/pentaho/contents/pash/html/index.html
@@ -30,7 +30,7 @@ To open pash outside of the Pentaho user console, point your browser to http://l
 
 ## On Jasper Reports Server
 
-Download the dist/Pash.zip package and unzip into apache-tomcate/webapps beneath your jasper reports server home directory.
+Download the bin/pash.zip package and unzip into apache-tomcate/webapps beneath your jasper reports server home directory.
 
 You can start pash by pointing your browser to http://localhost:8080/pash/html/index.html
 
@@ -38,7 +38,7 @@ You can start pash by pointing your browser to http://localhost:8080/pash/html/i
 
 ## On icCube
 
-Download the dist/Pash.zip package and unzip into the web directory beneath your icCube home directory.
+Download the bin/pash.zip package and unzip into the web directory beneath your icCube home directory.
 
 You can start pash by pointing your browser to http://localhost:8282/pash/html/index.html
 
@@ -46,7 +46,7 @@ You can start pash by pointing your browser to http://localhost:8282/pash/html/i
 
 ## On a standalone mondrian XML/A server
 
-Download the dist/Pash.zip package and unzip into whatever is the webapps directory of your server.
+Download the bin/pash.zip package and unzip into whatever is the webapps directory of your server.
 
 You can start pash by pointing your browser to http://yourserver:yourport/pash/html/index.html
 
