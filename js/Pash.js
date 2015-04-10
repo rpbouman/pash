@@ -74,7 +74,6 @@ var Xmlash = function(conf){
   this.addListener("leaveLine", this.leaveLineHandler, this);
   this.history = new exports.WshHistory(this);
   this.render();
-  this.handleHelp();
   this.initDatasources();
 };
 
@@ -431,7 +430,7 @@ xmlashPrototype = {
       }
     }
     if (!message.length) {
-      message = "<br/>Type an MDX query, or one of the shell commands." +
+      message = "Type an MDX query, or one of the shell commands." +
                 "<br/>Valid commands are: SHOW, USE and HELP." +
                 "<br/>To run the command or query, type a semi-colon (;), then press the Enter key." +
                 "<br/>" +
@@ -439,7 +438,8 @@ xmlashPrototype = {
                 "<br/>Refer to the MDX specification for more information about writing MDX queries." +
                 "<br/>" +
                 "<br/>Check out the tutorial here:" +
-                "<br/>" + this.tutorialLine
+                "<br/>" + this.tutorialLine +
+                "<br/>"
     }
     this.writeResult(message + "<br/>", true);
   },
@@ -574,7 +574,11 @@ xmlashPrototype = {
     statement = statement.substr(0, statement.lastIndexOf(";"));
     statement = statement.replace(/\xA0/g, " ");
     var request = me.xmlaRequest;
-    if (!request.properties) request.properties = {};
+    delete request.restrictions;
+    delete request.error;
+    if (!request.properties) {
+      request.properties = {};
+    }
     request.properties[Xmla.PROP_FORMAT] = Xmla.PROP_FORMAT_MULTIDIMENSIONAL;
     request.statement = statement;
     request.success = function(xmla, request, data){
@@ -645,33 +649,6 @@ xmlashPrototype = {
     this.writeResult("Error: " + message, append);
   },
   initDatasources: function(){
-    var me = this;
-    me.xmla.discoverDataSources({
-      success: function(xmla, request, rowset){
-        rowset.eachRow(function(row){
-          me.writeResult("Connected to datasource " + row.DataSourceName + ".", "");
-          me.xmlaRequest.properties.DataSourceInfo = row.DataSourceInfo;
-          me.createLine();
-          me.prompt = me.defaultPrompt;
-          me.createLine("", me.prompt);
-        });
-      },
-      error: function(){
-        showAlert(
-          "Error discovering datasources",
-          "An error occurred when attempting to find XML/A datasources." + (typeof(top.pho) === "undefined" ? "" :
-          "<br/>Verify that the \"EnableXmla\" data source parameter of your Analysis datasources is set to \"true\"." +
-          //"<br/>You can edit data source parameters in the <a href=\"javascript:window.top.pho.showDatasourceManageDialog(window.top.datasourceEditorCallback)\">\"Manage Datasources\"</a> dialog." +
-          "<br/>Alternatively, this error may be due to a misconfiguration of one of your mondrian schemas." +
-          "<br/>See <a href=\"http://jira.pentaho.com/browse/MONDRIAN-1056\">http://jira.pentaho.com/browse/MONDRIAN-1056</a> for more details.")
-        );
-        me.createLine();
-        me.prompt = me.defaultPrompt;
-        me.createLine("", me.prompt);
-      }
-    });
-  },
-  initDatasources: function(){
     switch (arguments.length) {
       case 0:
         var location = document.location, urls = [];
@@ -706,10 +683,10 @@ xmlashPrototype = {
       case 2:
         var urls = arguments[0], index = arguments[1];
         if (index >= urls.length) {
-          showAlert(
-            "Error discovering datasources",
-            "Unable to find the XML/A service. Try specifying the URL of the XML/A service using the \"XmlaUrl\" URL query parameter."
-          );
+          var title = "Error discovering datasources";
+          var msg = "Unable to find the XML/A service. Try specifying the URL of the XML/A service using the \"XmlaUrl\" URL query parameter."
+          showAlert(title, msg);
+          this.writeResult("<br/>" + title + ".<br/>" + msg);
           return;
         }
         var me = this;
@@ -717,11 +694,21 @@ xmlashPrototype = {
           url: urls[index],
           success: function(xmla, request, rowset){
             rowset.eachRow(function(row){
-              me.writeResult("Connected to datasource " + row.DataSourceName + ".", "");
+              me.writeResult(
+                "<br/>Connected to datasource " + row.DataSourceName +
+                "<br/>DataSourceInfo: " + row.DataSourceInfo +
+                "<br/>Description: " + row.DataSourceDescription +
+                "<br/>URL: " + row.URL +
+                "<br/>Provider: " + row.ProviderName + ", type: " + row.ProviderType +
+                "<br/>Authentication mode: " + row.AuthenticationMode,
+                ""
+              );
               me.xmlaRequest.properties.DataSourceInfo = row.DataSourceInfo;
               xmla.setOptions({
                 url: request.url
               });
+
+              me.handleHelp();
               me.createLine();
               me.prompt = me.defaultPrompt;
               me.createLine("", me.prompt);
