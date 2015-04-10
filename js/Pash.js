@@ -465,7 +465,7 @@ xmlashPrototype = {
                     "<br/>" +
                     "<br/>SHOW MEASURES WHERE CUBE_NAME = 'Sales'"
                     "<br/>" +
-                    "<br/>The WHERE clause may be required by certain XML/A providers in order to execute a particular SHOW command." +
+                    "<br/>The WHERE clause may be required by certain XML/A providers in order to execute a particular SHOW command."
           ;
           break;
         case "USE":
