@@ -455,15 +455,17 @@ xmlashPrototype = {
           break;
         case "SHOW":
           message += "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
-                     "<br/>Valid values for &lt;item&gt; are CATALOGS, CUBES, DIMENSIONS, HIERARCHIES, MEASURES, MEMBERS, PROPERTIES and SETS." +
+                     "<br/>Valid values for &lt;item&gt; are " + this.getShowKeywordList() + "." +
                      "<br/>"+
-                    "<br/>SHOW CATALOGS always lists all available catalogs." +
+                    "<br/>SHOW CATALOGS always lists all available catalogs; SHOW CATALOG shows the current catalog." +
                     "<br/>In order to SHOW something other than CATALOGS, you first need to select a particular catalog with the USE command." +
                     "<br/>" +
-                    "<br/>SHOW commands can have an optional WHERE clause." +
+                    "<br/>Most SHOW commands can optionally have a WHERE clause." +
                     "<br/>For example, to see which measures are available in the 'Sales' cube, you'd write:" +
                     "<br/>" +
                     "<br/>SHOW MEASURES WHERE CUBE_NAME = 'Sales'"
+                    "<br/>" +
+                    "<br/>The WHERE clause may be required by certain XML/A providers in order to execute a particular SHOW command." +
           ;
           break;
         case "USE":
