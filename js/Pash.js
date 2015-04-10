@@ -140,11 +140,11 @@ xmlashPrototype = {
       token.text = token.text.substr(1, token.text.length - 2);
     }
     if (!token || token.type !== "identifier") {
-      this.error("Expected a catalog name.");
+      this.error("Expected a catalog name. Found: end of statement.");
       return;
     }
     var request = me.xmlaRequest;
-    var oldCatalog = request.properties.Catalog;
+    var oldCatalog = this.getCurrentCatalog();
     request.restrictions.CATALOG_NAME = request.properties.Catalog = token.text;
     request.success = function(xmla, request, rowset){
       var i = 0;
@@ -152,11 +152,10 @@ xmlashPrototype = {
         if (i){
           throw "Unexpected error setting catalog (multiple catalogs found)";
         }
-        me.catalog = row.CATALOG_NAME;
-        me.writeResult("Current catalog set to \"" + me.catalog + "\".");
+        this.showCurrentCatalog();
         this.prompt = this.defaultPrompt;
         i++;
-      });
+      }, me);
       if (i !== 1) {
         var msg;
         if (i === 0) {
@@ -305,46 +304,67 @@ xmlashPrototype = {
     } while (tokenizer.hasMoreTokens());
     return restrictions;
   },
-  handleShow: function(){
-    var me = this, tokenizer = me.tokenizer, token, func;
-    var keywords = {
-      CATALOGS: "discoverDBCatalogs",
-      CUBES: "discoverMDCubes",
-      DIMENSIONS: "discoverMDDimensions",
-      HIERARCHIES: "discoverMDHierarchies",
-      LEVELS: "discoverMDLevels",
-      MEASURES: "discoverMDMeasures",
-      MEMBERS: "discoverMDMembers",
-      PROPERTIES: "discoverMDProperties",
-      SETS: "discoverMDSets"
-    };
-    var hasMoreTokens = tokenizer.hasMoreTokens();
-    var isString;
-    if (hasMoreTokens) {
-      var token = tokenizer.nextToken();
-      var keyWord = token.text;
-      keyWord = keyWord.toUpperCase();
-      var func = keywords[keyWord];
-      isString = typeof(func)!=="string";
+  showKeywordMethodMap: {
+    CATALOG: "showCurrentCatalog",
+    CATALOGS: "discoverDBCatalogs",
+    CUBES: "discoverMDCubes",
+    DIMENSIONS: "discoverMDDimensions",
+    HIERARCHIES: "discoverMDHierarchies",
+    LEVELS: "discoverMDLevels",
+    MEASURES: "discoverMDMeasures",
+    MEMBERS: "discoverMDMembers",
+    PROPERTIES: "discoverMDProperties",
+    SETS: "discoverMDSets"
+  },
+  getShowMethodName: function(keyword){
+    if (keyword.type && keyword.text) {
+      keyword = keyword.text;
     }
-    if (!hasMoreTokens || isString) {
-      var keyword, list = "";
-      for (keyword in keywords) {
+    return this.showKeywordMethodMap[keyword.toUpperCase()];
+  },
+  getShowKeywordList: function(){
+    if (!this.showKeywordList) {
+      var keyword, list = "", map = this.showKeywordMethodMap;
+      for (keyword in map) {
         if (list) {
           list += ", ";
         }
         list += keyword;
       }
+      this.showKeywordList = list;
+    }
+    return this.showKeywordList;
+  },
+  handleShow: function(){
+    var me = this, tokenizer = me.tokenizer, token, func;
+    var hasMoreTokens = tokenizer.hasMoreTokens();
+    var funcName, token, text;
+    if (hasMoreTokens) {
+      token = tokenizer.nextToken();
+      funcName = this.getShowMethodName(token);
+    }
+    if (!hasMoreTokens || !funcName) {
       this.error(
         "<br/>Unrecognized command argument \"" + (token ? token.text : "") + "\"" +
-        "<br/>Expected one of the following instead: " + list + ".",
+        "<br/>Expected one of the following instead: " + this.getShowKeywordList() + ".",
         true
       );
       return;
     }
+
+    if (funcName === "showCurrentCatalog") {
+      if (tokenizer.hasMoreTokens()) {
+        token = tokenizer.nextToken();
+        this.error("Expected: end of statement. Found " + token.type + " \"" + token.text + "\"");
+        return;
+      }
+      this[funcName].call(this);
+      return;
+    }
+
     var restrictions = this.parseWhereClause();
     var request = this.xmlaRequest;
-    var catalog = request.properties.Catalog;
+    var catalog = this.getCurrentCatalog();
     if (catalog) {
       restrictions.CATALOG_NAME = catalog;
     }
@@ -352,7 +372,8 @@ xmlashPrototype = {
       delete restrictions.CATALOG_NAME;
     }
     request.restrictions = restrictions;
-    if (func === "discoverDBCatalogs") {
+
+    if (funcName === "discoverDBCatalogs") {
       request.callback = function(){
         request.properties.Catalog = catalog;
         delete request.callback;
@@ -370,7 +391,33 @@ xmlashPrototype = {
     request.error = function(xmla, request, exception) {
       me.error("Unexpected error.");
     };
-    this.xmla[func].call(this.xmla, request);
+    var func = this.xmla[funcName];
+    if (typeof(func) === "function") {
+      func.call(this.xmla, request);
+    }
+    else {
+      //shouldn't arrive here.
+      me.error("Unexpected error: xmla4js does not support function " + funcName + "()");
+    }
+  },
+  showCurrentCatalog: function(){
+    var catalog = this.getCurrentCatalog();
+    if (catalog) {
+      this.writeResult("Current catalog set to \"" + catalog + "\".");
+    }
+    else {
+      this.showNoCatalogSet();
+    }
+  },
+  showNoCatalogSet: function(){
+    this.error("No catalog selected. Please run the USE command to select a catalog.", true);
+  },
+  getCurrentCatalog: function() {
+    var xmlaRequest = this.xmlaRequest;
+    if (!xmlaRequest) return undefined;
+    var properties = xmlaRequest.properties;
+    if (!properties) return undefined;
+    return properties.Catalog;
   },
   checkCatalogSet: function(request) {
     if (typeof(request) === "undefined") {
@@ -379,9 +426,9 @@ xmlashPrototype = {
     if (typeof(request.properties) === "undefined") {
       request.properties = {};
     }
-    var catalog = request.properties.Catalog;
+    var catalog = this.getCurrentCatalog();
     if (typeof(catalog) === "undefined") {
-      this.error("No catalog selected. Please run the USE command to select a catalog.", true);
+      this.showNoCatalogSet();
       return false;
     }
     return catalog;
