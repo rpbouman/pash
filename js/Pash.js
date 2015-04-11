@@ -127,6 +127,12 @@ xmlashPrototype = {
     this.statementLines.length = 0;
     this.fireEvent("commandHandled");
   },
+  showExpectedError: function(expected, found, append){
+    if (found.type && found.text) {
+      found = found.type + " \"" + found.text + "\"";
+    }
+    this.error("Expected " + expected + ". Found: " + found, + ".", append);
+  },
   handleUse: function(){
     var me = this;
     var token = this.tokenizer.nextToken(), tokenType = token.type;
@@ -140,7 +146,7 @@ xmlashPrototype = {
       token.text = token.text.substr(1, token.text.length - 2);
     }
     if (!token || token.type !== "identifier") {
-      this.error("Expected a catalog name. Found: end of statement.");
+      this.showExpectedError("a catalog name", "end of statement");
       return;
     }
     var request = me.xmlaRequest;
@@ -259,49 +265,81 @@ xmlashPrototype = {
       return restrictions;
     }
     var token, left, relop, right, expect = "WHERE";
-    do {
-      //get WHERE or AND
-      token = tokenizer.nextToken();
-      if (token.type !== "identifier" || String(token.text).toUpperCase() !== expect) {
-        throw "Expected keyword: " + expect + ". found: " + token.type + " \"" + token.text + "\"";
-      }
-      expect = "AND";
+    try {
+      do {
+        //get WHERE or AND
+        token = tokenizer.nextToken();
+        if (token.type !== "identifier" || String(token.text).toUpperCase() !== expect) {
+          throw {
+            expected: expect,
+            found:token
+          };
+        }
+        expect = "AND";
 
-      //get left
-      if (!tokenizer.hasMoreTokens()) {
-        throw "Unexpected end of statement. Expected: expression.";
-      }
-      token = tokenizer.nextToken();
-      if (token.type !== "identifier") {
-        throw "Expected: identifier, found: " + token.type + " \"" + token.text + "\"";
-      }
-      left = token;
+        //get left
+        if (!tokenizer.hasMoreTokens()) {
+          throw {
+            expected: "expression",
+            found: "end of statement"
+          };
+        }
+        token = tokenizer.nextToken();
+        if (token.type !== "identifier") {
+          throw {
+            expected: "identifier",
+            found: token
+          };
+        }
+        left = token;
 
-      //get relop
-      if (!tokenizer.hasMoreTokens()) {
-        throw "Unexpected end of statement. Expected: =";
-      }
-      token = tokenizer.nextToken();
-      if (token.type !== "operator" || token.text !== "=") {
-        throw "Expected: =, found: " + token.type + " \"" + token.text + "\"";
-      }
-      relop = token;
+        //get relop
+        if (!tokenizer.hasMoreTokens()) {
+          throw {
+            expected: "=",
+            found: "end of statement"
+          };
+        }
+        token = tokenizer.nextToken();
+        if (token.type !== "operator" || token.text !== "=") {
+          throw {
+            expected: "=",
+            found: token
+          };
+        }
+        relop = token;
 
-      //get right
-      if (!tokenizer.hasMoreTokens()) {
-        throw "Unexpected end of statement. Expected: string value.";
-      }
-      token = tokenizer.nextToken();
-      if (
-        token.type !== "double quoted string" &&
-        token.type !== "single quoted string"
-      ) {
-        throw "Expected: string value, found: " + token.type + " \"" + token.text + "\"";
-      }
-      right = token;
+        //get right
+        if (!tokenizer.hasMoreTokens()) {
+          throw {
+            expected: "string value",
+            found: "end of statement"
+          };
+        }
+        token = tokenizer.nextToken();
+        if (
+          token.type !== "double quoted string" &&
+          token.type !== "single quoted string"
+        ) {
+          throw {
+            expected: "string value",
+            found: token
+          };
+        }
+        right = token;
 
-      restrictions[String(left.text).toUpperCase()] = right.text.substr(1, right.text.length - 2);
-    } while (tokenizer.hasMoreTokens());
+        restrictions[String(left.text).toUpperCase()] = right.text.substr(1, right.text.length - 2);
+      } while (tokenizer.hasMoreTokens());
+    }
+    catch (e) {
+      if (e.expected && e.found) {
+        this.showExpectedError(e.expected, e.found);
+        return null;
+      }
+      else {
+        throw e;
+      }
+    }
     return restrictions;
   },
   showKeywordMethodMap: {
@@ -344,18 +382,14 @@ xmlashPrototype = {
       funcName = this.getShowMethodName(token);
     }
     if (!hasMoreTokens || !funcName) {
-      this.error(
-        "<br/>Unrecognized command argument \"" + (token ? token.text : "") + "\"" +
-        "<br/>Expected one of the following instead: " + this.getShowKeywordList() + ".",
-        true
-      );
+      this.showExpectedError("one of " + this.getShowKeywordList(), token);
       return;
     }
 
     if (funcName === "showCurrentCatalog") {
       if (tokenizer.hasMoreTokens()) {
         token = tokenizer.nextToken();
-        this.error("Expected: end of statement. Found " + token.type + " \"" + token.text + "\"");
+        this.showExpectedError("end of statement", token);
         return;
       }
       this[funcName].call(this);
@@ -661,9 +695,9 @@ xmlashPrototype = {
         case "SHOW":
           me.handleShow();
           break;
-        case "TEST":
-          me.handleTest();
-          break;
+//        case "TEST":
+//          me.handleTest();
+//          break;
         case "USE":
           me.handleUse();
           break;
@@ -671,7 +705,7 @@ xmlashPrototype = {
           me.handleHelp();
           break;
         default:
-          me.error("Unrecognized command: " + token.text, true);
+          this.showExpectedError("a shell command (HELP, SHOW, USE) or a MDX query (SELECT, WITH)", token, true);
       }
     }
     catch (e) {
