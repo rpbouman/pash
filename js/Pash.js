@@ -79,6 +79,7 @@ var Xmlash = function(conf){
 
 xmlashPrototype = {
   defaultPrompt: "MDX> ",
+  memberPropertyToRender: "Caption",
   getContinuationPrompt: function() {
     if (!this.continuationPrompt) {
       this.continuationPrompt = this.defaultPrompt.replace(/\w/g, " ").replace(/ >/g, "->");
@@ -128,25 +129,30 @@ xmlashPrototype = {
     this.fireEvent("commandHandled");
   },
   showExpectedError: function(expected, found, append){
+    if (append !== false) {
+      append = true;
+    }
     if (found.type && found.text) {
       found = found.type + " \"" + found.text + "\"";
     }
-    this.error("Expected " + expected + ". Found: " + found, + ".", append);
+    this.error("Expected " + expected + ". Found: " + found + ".", append);
   },
   handleUse: function(){
-    var me = this;
-    var token = this.tokenizer.nextToken(), tokenType = token.type;
-    if (  token &&
-        ( tokenType === "double quoted string" ||
-          tokenType === "single quoted string" ||
-          tokenType === "square braces"
-        )
-    ) {
-      tokenType = token.type = "identifier";
-      token.text = token.text.substr(1, token.text.length - 2);
+    var me = this, tokenizer = this.tokenizer, token;
+    if (tokenizer.hasMoreTokens()) {
+      token = tokenizer.nextToken(), tokenType = token.type;
+      if (  token &&
+          ( tokenType === "double quoted string" ||
+            tokenType === "single quoted string" ||
+            tokenType === "square braces"
+          )
+      ) {
+        tokenType = token.type = "identifier";
+        token.text = token.text.substr(1, token.text.length - 2);
+      }
     }
     if (!token || token.type !== "identifier") {
-      this.showExpectedError("a catalog name", "end of statement");
+      this.showExpectedError("a catalog name", token ? token : "end of statement");
       return;
     }
     var request = me.xmlaRequest;
@@ -342,6 +348,145 @@ xmlashPrototype = {
     }
     return restrictions;
   },
+  setPropertyMap: {
+    PROMPT: {
+      property: "defaultPrompt",
+      expected: ["single quoted string", "double quoted string", "identifier"],
+      setter: "setPrompt"
+    },
+    MEMBER_PROPERTY: {
+      property: "memberPropertyToRender",
+      expected: ["single quoted string", "double quoted string", "identifier"],
+      values: {
+        CAPTION: "Caption",
+        NAME: "UName"
+      }
+    }
+  },
+  getSetProperty: function(keyword){
+    if (keyword.type && keyword.text) {
+      keyword = keyword.text;
+    }
+    return this.setPropertyMap[keyword.toUpperCase()];
+  },
+  getSetPropertyList: function(){
+    if (!this.setPropertyList) {
+      var keyword, list = "", map = this.setPropertyMap;
+      for (keyword in map) {
+        if (list) {
+          list += ", ";
+        }
+        list += keyword;
+      }
+      this.setPropertyList = list;
+    }
+    return this.setPropertyList;
+  },
+  handleSet: function(){
+    var me = this, tokenizer = me.tokenizer, token, func;
+    var hasMoreTokens = tokenizer.hasMoreTokens();
+    var prop, token, text;
+    if (hasMoreTokens) {
+      token = tokenizer.nextToken();
+      prop = this.getSetProperty(token);
+    }
+    if (!hasMoreTokens || !prop) {
+      this.showExpectedError(
+        "one of " + this.getSetPropertyList(),
+        hasMoreTokens ? token : "end of statement"
+      );
+      return;
+    }
+
+    var expected;
+    if (prop.values) {
+      expected = "";
+      var keyword;
+      for (keyword in prop.values) {
+        if (expected) {
+          expected += " ,";
+        }
+        expected += keyword;
+      }
+    }
+    else
+    if (prop.expected){
+      expected = prop.expected.join(", ");
+    }
+
+    if (!tokenizer.hasMoreTokens()){
+      if (expected) {
+        this.showExpectedError(expected, "end of statement");
+      }
+      else {
+        this.error("Unexpected error: property does not provide a hint for an expected value.");
+      }
+      return;
+    }
+
+    token = tokenizer.nextToken();
+    if (prop.expected.indexOf(token.type) === -1) {
+      this.showExpectedError(expected, token);
+      return;
+    }
+
+    var value, propValue;
+    switch (token.type) {
+      case "single quoted string":
+      case "double quoted string":
+        value = token.text.substr(1, token.text.length - 2);
+        break;
+      default:
+        value = token.text;
+    }
+
+    if (prop.values) {
+      value = value.toUpperCase();
+      var keyword;
+      for (keyword in prop.values) {
+        if (keyword === value) {
+          propValue = prop.values[keyword];
+          break;
+        }
+      }
+    }
+    else {
+      propValue = value;
+    }
+
+    if (tokenizer.hasMoreTokens()) {
+      token = tokenizer.nextToken();
+      this.showExpectedError("end of statement", token);
+      return;
+    }
+    this.setProperty(prop, propValue);
+  },
+  setPrompt: function(value) {
+    this.prompt = this.defaultPrompt = value + "> ";
+    var me = this;
+    setTimeout(
+      function(){
+        me.updateCaretPosition();
+      }, 50
+    );
+  },
+  setProperty: function(prop, value){
+    if (prop.setter) {
+      var setter;
+      if (typeof(prop.setter) === "string") {
+        setter = this[prop.setter];
+      }
+      if (typeof(setter) === "function") {
+        setter.call(this, value);
+      }
+      else {
+        this.error("Unexpected error: invalid setter for property.");
+      }
+    }
+    else {
+      this[prop.property] = value;
+    }
+  },
   showKeywordMethodMap: {
     CATALOG: "showCurrentCatalog",
     CATALOGS: "discoverDBCatalogs",
@@ -382,7 +527,10 @@ xmlashPrototype = {
       funcName = this.getShowMethodName(token);
     }
     if (!hasMoreTokens || !funcName) {
-      this.showExpectedError("one of " + this.getShowKeywordList(), token);
+      this.showExpectedError(
+        "one of " + this.getShowKeywordList(),
+        hasMoreTokens ? token : "end of statement"
+      );
       return;
     }
 
@@ -487,6 +635,12 @@ xmlashPrototype = {
                      "<br/>" + this.tutorialLine
           ;
           break;
+        case "SET":
+          message +=  "<br/>Type SET &lt;property&gt; &lt;value&gt; to change the value of a Pash property." +
+                      "<br/>Properties control how Pash behaves." +
+                      "<br/>Valid properties are " + this.getSetPropertyList() + "."
+          ;
+          break;
         case "SHOW":
           message += "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
                      "<br/>Valid values for &lt;item&gt; are " + this.getShowKeywordList() + "." +
@@ -514,7 +668,7 @@ xmlashPrototype = {
     }
     if (!message.length) {
       message = "Type an MDX query, or one of the shell commands." +
-                "<br/>Valid commands are: SHOW, USE and HELP." +
+                "<br/>Valid commands are: SET, SHOW, USE and HELP." +
                 "<br/>To run the command or query, type a semi-colon (;), then press the Enter key." +
                 "<br/>" +
                 "<br/>To get help about a specific shell command, type HELP &lt;commmand&gt;." +
@@ -546,6 +700,10 @@ xmlashPrototype = {
           me.writeResult(getTupleName(tuple));
       }
 
+      function renderMember(member){
+          return escXml(member[me.memberPropertyToRender]);
+      }
+
       function renderHeader(axis, dummy) {
           var thead = "<thead>";
           var rowAxis;
@@ -567,7 +725,7 @@ xmlashPrototype = {
             }
             axis.eachTuple(function(tuple){
               var member = tuple.members[i];
-              thead += "<th>" + escXml(member.Caption) + "</th>";
+              thead += "<th>" + renderMember(member) + "</th>";
             });
             thead += "</tr>";
             i++;
@@ -604,7 +762,7 @@ xmlashPrototype = {
           i = 0;
           rowAxis.eachHierarchy(function(hierarchy){
             var member = tuple.members[i];
-            tbody += "<th>" + escXml(member.Caption) + "</th>";
+            tbody += "<th>" + renderMember(member) + "</th>";
             i++;
           });
           tbody += renderCells(columnAxis);
@@ -691,6 +849,9 @@ xmlashPrototype = {
         case "SELECT":
         case "WITH":
           me.handleExecute();
+          break;
+        case "SET":
+          me.handleSet();
           break;
         case "SHOW":
           me.handleShow();
