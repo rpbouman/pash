@@ -67,9 +67,9 @@ var Xmlash = function(conf){
     }
   ]);
   this.lines = [
-    "MDX shell powered by Xmla4js.",
+    "MDX shell version " + this.version + " powered by Xmla4js.",
     "Copyright 2014, 2015 Roland Bouman.",
-    "This program is open source.",
+    "This program is open source."
   ];
   this.addListener("leaveLine", this.leaveLineHandler, this);
   this.history = new exports.WshHistory(this);
@@ -78,6 +78,7 @@ var Xmlash = function(conf){
 };
 
 xmlashPrototype = {
+  version: "0.15 - EDGE",
   defaultPrompt: "MDX> ",
   memberPropertyToRender: "Caption",
   getContinuationPrompt: function() {
