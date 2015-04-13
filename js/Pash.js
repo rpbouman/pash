@@ -67,7 +67,7 @@ var Xmlash = function(conf){
     }
   ]);
   this.lines = [
-    "MDX shell powered by Xmla4js.",
+    "MDX shell version " + this.version + " powered by Xmla4js.",
     "Copyright 2014, 2015 Roland Bouman.",
     "This program is open source.",
   ];
@@ -78,6 +78,7 @@ var Xmlash = function(conf){
 };
 
 xmlashPrototype = {
+  version: "0.14 / MONDRIAN-2263",
   defaultPrompt: "MDX> ",
   memberPropertyToRender: "Caption",
   getContinuationPrompt: function() {
@@ -948,10 +949,15 @@ xmlashPrototype = {
                 "<br/>Description: " + row.DataSourceDescription +
                 "<br/>URL: " + row.URL +
                 "<br/>Provider: " + row.ProviderName + ", type: " + row.ProviderType +
-                "<br/>Authentication mode: " + row.AuthenticationMode,
+                "<br/>Authentication mode: " + row.AuthenticationMode +
+                "<br/>"+
+                "<br/>Using \"" + row.DataSourceName + "\" instead of \"" + row.DataSourceInfo + "\" as DataSourceInfo in subsequent requests."+
+                "<br/>"+
+                "<br/>Warning: this version of Pash uses a workaround for Pentaho 5.3/MONDRIAN-2263." +
+                "<br/>If you're experiencing problems, check your BI Server version, or up- or downgrade Pash.",
                 ""
               );
-              me.xmlaRequest.properties.DataSourceInfo = row.DataSourceInfo;
+              me.xmlaRequest.properties.DataSourceInfo = row.DataSourceName;
               xmla.setOptions({
                 url: request.url
               });
