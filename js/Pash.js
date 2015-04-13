@@ -585,7 +585,7 @@ xmlashPrototype = {
   showCurrentCatalog: function(){
     var catalog = this.getCurrentCatalog();
     if (catalog) {
-      this.writeResult("Current catalog set to \"" + catalog + "\".");
+      this.writeResult("Current catalog set to \"" + catalog + "\".", true);
     }
     else {
       this.showNoCatalogSet();
@@ -596,9 +596,13 @@ xmlashPrototype = {
   },
   getCurrentCatalog: function() {
     var xmlaRequest = this.xmlaRequest;
-    if (!xmlaRequest) return undefined;
+    if (!xmlaRequest) {
+      return undefined;
+    }
     var properties = xmlaRequest.properties;
-    if (!properties) return undefined;
+    if (!properties) {
+      return undefined;
+    }
     return properties.Catalog;
   },
   checkCatalogSet: function(request) {
