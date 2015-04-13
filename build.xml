@@ -17,10 +17,20 @@
   <property name="bipasswd"         value="password"/>
   <property name="bihome"           value="http://${bihost}:${biport}/pentaho?userid=${biuser}&amp;password=${bipasswd}"/>
 
+  <property name="pentaho-5.1"  location="/home/roland/pentaho-ce/biserver-ce-5.1.0.0-752/biserver-ce/pentaho-solutions/system"/>
+  <property name="pentaho-5.2"  location="/home/roland/pentaho-ce/biserver-ce-5.2.0.0-209/biserver-ce/pentaho-solutions/system"/>
+  <property name="pentaho-5.3"  location="/home/roland/pentaho-ce/biserver-ce-5.3.0.0-213/biserver-ce/pentaho-solutions/system"/>
   <property name="jasper.webapps.dir"  location="/home/roland/jasperreports-server-cp-6.0.1/apache-tomcat/webapps"/>
+  <property name="tomcat.webapps.dir"  location="/home/roland/apache-tomcat-7.0.56/webapps"/>
 
-  <property name="icCube.dir"  location="/home/roland/icCube-4.8.2"/>
-  <property name="icCube.web.dir"  location="${icCube.dir}/web"/>
+<!--
+  <property name="icCube.dir"         location="/home/roland/icCube/icCube-4.8.2"/>
+-->
+  <property name="icCube.dir"         location="/home/roland/icCube/icCube-5.0.2"/>
+  <property name="icCube.web.dir"     location="${icCube.dir}/web"/>
+
+  <property name="spago.dir"          location="/home/roland/spago-5.1-21012015/All-In-One-SpagoBI-5.1.0_21012015"/>
+  <property name="spago.web.dir"      location="${spago.dir}/webapps"/>
 
   <target name="init">
     <!-- Create the time stamp -->
@@ -60,38 +70,60 @@
     <delete dir="${bin}/${ant.project.name}"/>
   </target>
 
-  <target name="deploy" depends="dist">
-    <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-solutions-system}"/>
+  <target name="deploy-pentaho-5.3" depends="dist">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-5.3}"/>
+  </target>
+
+  <target name="undeploy-pentaho-5.3" description="undeploy distribution">
+    <delete dir="${pentaho-5.3}/${ant.project.name}"/>
+  </target>
+
+  <target name="deploy-pentaho-5.2" depends="dist">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-5.2}"/>
+  </target>
+
+  <target name="undeploy-pentaho-5.2" description="undeploy distribution">
+    <delete dir="${pentaho-5.2}/${ant.project.name}"/>
+  </target>
+
+  <target name="deploy-pentaho-5.1" depends="dist">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-5.1}"/>
+  </target>
+
+  <target name="undeploy-pentaho-5.1" description="undeploy distribution">
+    <delete dir="${pentaho-5.1}/${ant.project.name}"/>
   </target>
 
   <target name="deploy-iccube" depends="dist" description="deploy distribution">
     <unzip src="${bin}/${ant.project.name}.zip" dest="${icCube.web.dir}"/>
   </target>
 
+  <target name="undeploy-iccube" description="undeploy distribution">
+    <delete dir="${icCube.web.dir}/${ant.project.name}"/>
+  </target>
+
+  <target name="deploy-spago" depends="dist" description="deploy distribution">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${spago.web.dir}"/>
+  </target>
+
+  <target name="undeploy-spago" description="undeploy distribution">
+    <delete dir="${spago.web.dir}/${ant.project.name}"/>
+  </target>
+
   <target name="deploy-jasper" depends="dist" description="deploy distribution">
     <unzip src="${bin}/${ant.project.name}.zip" dest="${jasper.webapps.dir}"/>
   </target>
 
-  <target name="undeploy" description="undeploy distribution">
-    <delete dir="${pentaho-solutions-system}/${ant.project.name}"/>
+  <target name="undeploy-jasper" description="undeploy distribution">
+    <delete dir="${jasper.webapps.dir}/${ant.project.name}"/>
   </target>
 
-  <target name="startup" depends="shutdown">
-    <echo message="Sleeping for ${sleep} seconds to allow the server to shutdown."/>
-    <sleep seconds="${sleep}"/>
-    <exec executable="${biserver}/start-pentaho.sh" spawn="true"/>
+  <target name="deploy-tomcat" depends="dist" description="deploy distribution">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${tomcat.webapps.dir}"/>
   </target>
 
-  <target name="shutdown">
-    <exec executable="${biserver}/stop-pentaho.sh" spawn="true"/>
-  </target>
-
-  <target name="launch" depends="deploy,startup">
-    <echo message="Sleeping for ${sleep} seconds to allow the server to startup."/>
-    <sleep seconds="${sleep}"/>
-    <exec executable="${browser}" spawn="true">
-      <arg value="${bihome}"/>
-    </exec>
+  <target name="undeploy-tomcat" description="undeploy distribution">
+    <delete dir="${tomcat.webapps.dir}/${ant.project.name}"/>
   </target>
 
   <target name="clean" description="clean up" >
