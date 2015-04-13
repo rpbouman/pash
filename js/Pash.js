@@ -963,7 +963,25 @@ xmlashPrototype = {
             });
           },
           error: function(xmla, request){
-            me.initDatasources(urls, ++index);
+            var exception = request.exception;
+            if (exception.code === -10) {
+              var data = exception.data;
+              if (data.status === 404) {
+                me.initDatasources(urls, ++index);
+              }
+            }
+            else
+            if (exception.code.indexOf("SOAP-ENV") === 0) {
+              me.error(exception.code + ": " + exception.message);
+              try {
+                var xml = request.xhr.responseXML;
+                var code = xml.getElementsByTagName("code")[0].firstChild.data;
+                var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
+                me.error(desc + " (" + code + ")");
+              }
+              catch (e) {
+              }
+            }
           }
         });
         break;
