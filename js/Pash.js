@@ -579,6 +579,7 @@ xmlashPrototype = {
       me.renderRowset(rowset);
     };
     request.error = function(xmla, request, exception) {
+      request.restrictions = {};
       me.error("Unexpected error.");
     };
     var func = this.xmla[funcName];
