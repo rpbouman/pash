@@ -47,7 +47,7 @@ var Xmlash = function(conf){
           request.method === Xmla.METHOD_DISCOVER &&
           request.requestType === Xmla.DISCOVER_DATASOURCES
         ) {
-          console.log("Error discovering datasource: " + code + ": " + desc);
+          console.log("Error discovering datasource: " + escXml(code) + ": " + escXml(desc));
         }
         else {
           this.error(desc + " (" + code + ")");
@@ -55,7 +55,7 @@ var Xmlash = function(conf){
             var xml = request.xhr.responseXML;
             var code = xml.getElementsByTagName("code")[0].firstChild.data;
             var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
-            this.error(desc + " (" + code + ")");
+            this.error(escXml(desc) + " (" + escXml(code) + ")");
           }
           catch (e) {
             //no extra info
@@ -569,7 +569,7 @@ xmlashPrototype = {
         delete request.callback;
       }
       delete request.properties.Catalog;
-      delete request.restrictions.CATALOG_NAME;
+      request.restrictions = {};
     }
     else
     if (!this.checkCatalogSet(request)) {
