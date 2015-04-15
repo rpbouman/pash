@@ -596,7 +596,7 @@ xmlashPrototype = {
     }
   },
   showNoCatalogSet: function(){
-    this.error("No catalog selected. Please run the USE command to select a catalog.");
+    this.error("No catalog selected. Please run the USE command to select a catalog.", true);
   },
   getCurrentCatalog: function() {
     var xmlaRequest = this.xmlaRequest;
