@@ -576,6 +576,7 @@ xmlashPrototype = {
       return;
     }
     request.success = function(xmla, request, rowset) {
+      request.restrictions = {};
       me.renderRowset(rowset);
     };
     request.error = function(xmla, request, exception) {
