@@ -504,7 +504,8 @@ xmlashPrototype = {
     if (keyword.type && keyword.text) {
       keyword = keyword.text;
     }
-    return this.showKeywordMethodMap[keyword.toUpperCase()];
+    keyword = keyword.toUpperCase();
+    return this.showKeywordMethodMap[keyword];
   },
   getShowKeywordList: function(){
     if (!this.showKeywordList) {
@@ -519,6 +520,12 @@ xmlashPrototype = {
     }
     return this.showKeywordList;
   },
+  showExpectedShowKeywordError: function(token, hasMoreTokens){
+    this.showExpectedError(
+      "one of " + this.getShowKeywordList(),
+      hasMoreTokens ? token : "end of statement"
+    );
+  },
   handleShow: function(){
     var me = this, tokenizer = me.tokenizer, token, func;
     var hasMoreTokens = tokenizer.hasMoreTokens();
@@ -528,10 +535,7 @@ xmlashPrototype = {
       funcName = this.getShowMethodName(token);
     }
     if (!hasMoreTokens || !funcName) {
-      this.showExpectedError(
-        "one of " + this.getShowKeywordList(),
-        hasMoreTokens ? token : "end of statement"
-      );
+      this.showExpectedShowKeywordError(token, hasMoreTokens);
       return;
     }
 
@@ -626,6 +630,61 @@ xmlashPrototype = {
   tutorialLine: "<a class=\"link\" target=\"_blank\" href=\"https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell\">" +
                 "https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell" +
                 "</a>",
+  showHelpForShowMethod: function(methodName){
+    var me = this;
+    var showHelpForShowMethod = function(append){
+      var text = this.xmlaSourceText;
+      var indexOfMethodDoc = text.indexOf("@method " + methodName);
+      if (indexOfMethodDoc === -1) {
+        throw "No method " + methodName + " found.";
+      }
+      text = text.substr(0, indexOfMethodDoc);
+      var indexOfDoc = text.lastIndexOf("/**");
+      if (indexOfDoc === -1) {
+        throw "Start of documentation for method " + methodName + " not found.";
+      }
+      text = text.substr(indexOfDoc);
+      text = text.replace(/\n\*\s*/g, "");
+
+      var indexOfTable;
+      indexOfTable = text.indexOf("</table>");
+      if (indexOfTable === -1) {
+        throw "No column table found";
+      }
+      text = text.substr(0, indexOfTable + "</table>".length);
+      indexOfTable = text.indexOf("<table");
+      if (indexOfTable === -1) {
+        throw "No column table found";
+      }
+      text = text.substr(indexOfTable);
+      me.writeResult(text, append);
+    };
+
+    if (this.xmlaSourceText) {
+      showHelpForShowMethod.call(me, true);
+    }
+    else {
+      var location = document.location;
+      var url = location.origin + location.pathname.replace(/html\/index.html/, "js/Xmla.js");
+      var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
+      xhr.open("GET", url, true);
+      xhr.onreadystatechange = function(){
+        switch (this.readyState) {
+          case 0:
+            options.aborted(options, this);
+            break;
+          case 4:
+            if (xhr.status === 200){
+              me.xmlaSourceText = xhr.responseText;
+              showHelpForShowMethod.call(me, false);
+            }
+            break;
+          default:
+        }
+      };
+      xhr.send(null);
+    }
+  },
   handleHelp: function(){
     var me = this, tokenizer = me.tokenizer, token, text, message = "";
     while (tokenizer.hasMoreTokens()){
@@ -650,19 +709,41 @@ xmlashPrototype = {
           ;
           break;
         case "SHOW":
-          message += "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
-                     "<br/>Valid values for &lt;item&gt; are " + this.getShowKeywordList() + "." +
-                     "<br/>"+
-                    "<br/>SHOW CATALOGS always lists all available catalogs; SHOW CATALOG shows the current catalog." +
-                    "<br/>In order to SHOW something other than CATALOGS, you first need to select a particular catalog with the USE command." +
-                    "<br/>" +
-                    "<br/>Most SHOW commands can optionally have a WHERE clause." +
-                    "<br/>For example, to see which measures are available in the 'Sales' cube, you'd write:" +
-                    "<br/>" +
-                    "<br/>SHOW MEASURES WHERE CUBE_NAME = 'Sales'"
-                    "<br/>" +
-                    "<br/>The WHERE clause may be required by certain XML/A providers in order to execute a particular SHOW command."
-          ;
+          if (tokenizer.hasMoreTokens()) {
+            token = tokenizer.nextToken();
+            var methodName = this.getShowMethodName(token);
+            if (!methodName) {
+              this.showExpectedShowKeywordError(token, false);
+              return;
+            }
+            else
+            if (methodName === "showCurrentCatalog") {
+              message = "Shows the name of the currently selected Catalog.";
+              break;
+            }
+            var hasMoreTokens = tokenizer.hasMoreTokens();
+            if (hasMoreTokens) {
+              this.showExpectedError("end of statement", token);
+              return;
+            }
+            this.showHelpForShowMethod(methodName);
+            return;
+          }
+          else {
+            message += "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
+                       "<br/>Valid values for &lt;item&gt; are " + this.getShowKeywordList() + "." +
+                       "<br/>"+
+                      "<br/>SHOW CATALOGS always lists all available catalogs; SHOW CATALOG shows the current catalog." +
+                      "<br/>In order to SHOW something other than CATALOGS, you first need to select a particular catalog with the USE command." +
+                      "<br/>" +
+                      "<br/>Most SHOW commands can optionally have a WHERE clause." +
+                      "<br/>For example, to see which measures are available in the 'Sales' cube, you'd write:" +
+                      "<br/>" +
+                      "<br/>SHOW MEASURES WHERE CUBE_NAME = 'Sales'"
+                      "<br/>" +
+                      "<br/>The WHERE clause may be required by certain XML/A providers in order to execute a particular SHOW command."
+            ;
+          }
           break;
         case "USE":
           message += "<br/>Type USE &lt;catalog&gt; to select a particular catalog to work with." +
