@@ -713,7 +713,7 @@ xmlashPrototype = {
             token = tokenizer.nextToken();
             var methodName = this.getShowMethodName(token);
             if (!methodName) {
-              this.showExpectedShowKeywordError(token, false);
+              this.showExpectedShowKeywordError(token, true);
               return;
             }
             else
@@ -745,7 +745,7 @@ xmlashPrototype = {
                         "<br/>"+
                         "<br/>For a description of the type of info returned by a particular SHOW &lt;item&gt; command, type:"+
                         "<br/>"+
-                        "<br/>HELP SHOW &lt;item&gt;"+
+                        "<br/>HELP SHOW &lt;item&gt;"
             ;
           }
           break;
