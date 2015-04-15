@@ -546,6 +546,9 @@ xmlashPrototype = {
     }
 
     var restrictions = this.parseWhereClause();
+    if (restrictions === null) {
+      return;
+    }
     var request = this.xmlaRequest;
     var catalog = this.getCurrentCatalog();
     if (catalog) {
@@ -586,14 +589,14 @@ xmlashPrototype = {
   showCurrentCatalog: function(){
     var catalog = this.getCurrentCatalog();
     if (catalog) {
-      this.writeResult("Current catalog set to \"" + catalog + "\".", true);
+      this.writeResult("Current catalog set to \"" + catalog + "\".");
     }
     else {
       this.showNoCatalogSet();
     }
   },
   showNoCatalogSet: function(){
-    this.error("No catalog selected. Please run the USE command to select a catalog.", true);
+    this.error("No catalog selected. Please run the USE command to select a catalog.");
   },
   getCurrentCatalog: function() {
     var xmlaRequest = this.xmlaRequest;
