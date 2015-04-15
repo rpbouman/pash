@@ -50,12 +50,12 @@ var Xmlash = function(conf){
           console.log("Error discovering datasource: " + code + ": " + desc);
         }
         else {
-          this.error(desc + " (" + code + ")");
+          this.error(escXml(desc) + " (" + escXml(code) + ")");
           try { //try to extract code and desc, these are passed by mondrian and often contain the actual information.
             var xml = request.xhr.responseXML;
             var code = xml.getElementsByTagName("code")[0].firstChild.data;
             var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
-            this.error(desc + " (" + code + ")");
+            this.error(escXml(desc) + " (" + escXml(code) + ")");
           }
           catch (e) {
             //no extra info
@@ -569,16 +569,18 @@ xmlashPrototype = {
         delete request.callback;
       }
       delete request.properties.Catalog;
-      delete request.restrictions.CATALOG_NAME;
+      request.restrictions = {};
     }
     else
     if (!this.checkCatalogSet(request)) {
       return;
     }
     request.success = function(xmla, request, rowset) {
+      request.restrictions = {};
       me.renderRowset(rowset);
     };
     request.error = function(xmla, request, exception) {
+      request.restrictions = {};
       me.error("Unexpected error.");
     };
     var func = this.xmla[funcName];
