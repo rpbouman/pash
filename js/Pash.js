@@ -667,7 +667,8 @@ xmlashPrototype = {
     }
     else {
       var location = document.location;
-      var url = location.origin + location.pathname.replace(/html\/index.html/, "js/Xmla.js");
+      var origin = location.protocol + "//" + location.host;
+      var url = origin + location.pathname.replace(/html\/index.html/, "js/Xmla.js");
       var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
       xhr.open("GET", url, true);
       xhr.onreadystatechange = function(){
@@ -1007,7 +1008,8 @@ xmlashPrototype = {
           }
         }
         if (!urls.length) {
-          var base = location.origin + "/";
+          var origin = location.protocol + "//" + location.host;
+          var base = origin + "/";
           //mondrian, f.e. http://localhost:8080/mondrian/xmla
           urls.push(base + "mondrian/xmla");
           //jasperreports, f.e. http://localhost:8080/jasperserver/xmla
@@ -1057,8 +1059,10 @@ xmlashPrototype = {
             var exception = request.exception;
             if (exception.code === -10) {
               var data = exception.data;
-              if (data.status === 404) {
-                me.initDatasources(urls, ++index);
+              switch (data.status) {
+                default:
+                  me.initDatasources(urls, ++index);
+                  break;
               }
             }
             else
