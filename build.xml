@@ -26,8 +26,8 @@
 <!--
   <property name="icCube.dir"         location="/home/roland/icCube/icCube-4.8.2"/>
 -->
-  <property name="icCube.dir"         location="/home/roland/icCube/icCube-5.0.2"/>
-  <property name="icCube.web.dir"     location="${icCube.dir}/web"/>
+  <property name="icCube"         location="/home/roland/icCube/"/>
+  <property name="icCubeWeb"     location="/web"/>
 
   <property name="spago.dir"          location="/home/roland/spago-5.1-21012015/All-In-One-SpagoBI-5.1.0_21012015"/>
   <property name="spago.web.dir"      location="${spago.dir}/webapps"/>
@@ -94,12 +94,12 @@
     <delete dir="${pentaho-5.1}/${ant.project.name}"/>
   </target>
 
-  <target name="deploy-iccube" depends="dist" description="deploy distribution">
-    <unzip src="${bin}/${ant.project.name}.zip" dest="${icCube.web.dir}"/>
+  <target name="deploy-iccube-5.0.2" depends="dist,undeploy-iccube-5.0.2" description="deploy distribution">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${icCube}/icCube-5.0.2/${icCubeWeb}"/>
   </target>
 
-  <target name="undeploy-iccube" description="undeploy distribution">
-    <delete dir="${icCube.web.dir}/${ant.project.name}"/>
+  <target name="undeploy-iccube-5.0.2" description="undeploy distribution">
+    <delete dir="${icCube}/icCube-5.0.2/${icCubeWeb}/${ant.project.name}"/>
   </target>
 
   <target name="deploy-spago" depends="dist" description="deploy distribution">
