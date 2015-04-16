@@ -494,6 +494,7 @@ xmlashPrototype = {
     CATALOGS: "discoverDBCatalogs",
     CUBES: "discoverMDCubes",
     DIMENSIONS: "discoverMDDimensions",
+    FUNCTIONS: "discoverMDFunctions",
     HIERARCHIES: "discoverMDHierarchies",
     LEVELS: "discoverMDLevels",
     MEASURES: "discoverMDMeasures",
@@ -563,18 +564,25 @@ xmlashPrototype = {
     }
     request.restrictions = restrictions;
 
-    if (funcName === "discoverDBCatalogs") {
-      request.callback = function(){
-        request.properties.Catalog = catalog;
-        delete request.callback;
-      }
-      delete request.properties.Catalog;
-      request.restrictions = {};
+    switch (funcName) {
+      case "discoverDBCatalogs":
+      case "discoverMDFunctions":
+        request.callback = function(){
+          request.properties.Catalog = catalog;
+          delete request.callback;
+        }
+        delete request.properties.Catalog;
+        if (funcName === "discoverDBCatalogs") {
+          request.restrictions = {};
+        }
+        break;
+      default:
+        if (!this.checkCatalogSet(request)) {
+          return;
+        }
+        break;
     }
-    else
-    if (!this.checkCatalogSet(request)) {
-      return;
-    }
+
     request.success = function(xmla, request, rowset) {
       request.restrictions = {};
       me.renderRowset(rowset);
