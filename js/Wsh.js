@@ -257,7 +257,9 @@ var Wsh;
     return this.getTextArea().value;
   },
   focus: function() {
-    if (this.fireEvent("beforeFocus", {}) === false) return;
+    if (this.fireEvent("beforeFocus", {}) === false) {
+      return;
+    }
     this.getTextArea().focus();
     this.fireEvent("afterFocus", {});
   },
@@ -434,10 +436,16 @@ WshHistory.prototype = {
           return;
         };
         line = lines[idx];
-        if (line.className !== "wsh-line") continue;
+        if (line.className !== "wsh-line") {
+          continue;
+        }
         text = wsh.getLineTextString(line);
-        if (text === "") continue;
-        if (texts[text]) continue;
+        if (text === "") {
+          continue;
+        }
+        if (texts[text]) {
+          continue;
+        }
         texts[text] = true;
         break;
       };
