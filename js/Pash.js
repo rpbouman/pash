@@ -9,6 +9,7 @@ function escXml(str) {
 
 var Xmlash = function(conf){
   Wsh.apply(this, arguments);
+  this.lineNumber = 1;
   this.tokenizer = new exports.PashTokenizer();
   this.prompt = "";
   this.statementLines = [];
@@ -82,13 +83,16 @@ xmlashPrototype = {
   defaultPrompt: "MDX> ",
   memberPropertyToRender: "Caption",
   getContinuationPrompt: function() {
-    if (!this.continuationPrompt) {
-      this.continuationPrompt = this.defaultPrompt.replace(/\w/g, " ").replace(/ >/g, "->");
+    var prompt = String(this.lineNumber) + " ";
+    var defaultPrompt = this.defaultPrompt;
+    var i, n = defaultPrompt.length - prompt.length;
+    for (i = 0; i < n; i++){
+      prompt = " " + prompt;
     }
-    return this.continuationPrompt;
+    return prompt;
   },
   leaveLineHandler: function(){
-    var text = this.getLineText().textContent + "\n";
+    var text = this.getLineText().textContent;
     var tokenizer = this.tokenizer, token,
         terminator = false, afterTerminator = false,
         prompt
@@ -102,6 +106,7 @@ xmlashPrototype = {
     }
     this.statementLines.push(text);
     if (terminator) {
+      this.lineNumber = 1;
       this.prompt = this.defaultPrompt;
       if (afterTerminator) {
         this.fireEvent("error");
@@ -112,6 +117,7 @@ xmlashPrototype = {
       }
     }
     else {
+      this.lineNumber++;
       this.prompt = this.getContinuationPrompt();
     }
   },
