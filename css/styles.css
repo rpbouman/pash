@@ -36,6 +36,11 @@ tbody td, tbody th {
 table.dataset > tbody > tr > td {
   text-align: right;
 }
+
+table.dataset > tbody > tr > td.string {
+  text-align: left;
+}
+
 table.dataset > tbody > tr > th {
   text-align: left;
 }

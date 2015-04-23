@@ -855,7 +855,15 @@ xmlashPrototype = {
               else {
                   value = "";
               }
-              td += "<td>" + value + "</td>";
+              var className = typeof(value);
+              if (className === "string") {
+                className = " class=\"" + className + "\"";
+                value = escXml(value);
+              }
+              else {
+                className = "";
+              }
+              td += "<td" + className + ">" + value + "</td>";
           });
           return td;
       }
