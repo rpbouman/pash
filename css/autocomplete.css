@@ -9,6 +9,7 @@ div.pash-autocomplete-list {
   z-index: 1;
   background-color: white;
   padding-right: 1em;
+  display: none;
 }
 
 div.pash-autocomplete-list > div.selected {

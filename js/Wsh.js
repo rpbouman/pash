@@ -154,10 +154,13 @@ var Wsh;
   getLineBreak: function(interval) {
     return this.conf.lineBreak || Wsh.defaultConfig.lineBreak;
   },
+  replaceNbsp: function(text) {
+    return text.replace(/\xA0/g, " ");
+  },
   updateText: function(){
     var textarea = this.getTextArea();
     var text = textarea.value;
-    text = text.replace(/\xA0/g, " ");
+    text = this.replaceNbsp(text);
     var lineBreak = this.conf.lineBreak;
     var line;
     if (lineBreak.test(text)) {
@@ -202,8 +205,12 @@ var Wsh;
     }
   },
   keyDownHandler: function(e) {
-    if (this.inputBlocked) return;
-    this.fireEvent("keydown", e);
+    if (this.inputBlocked) {
+      return;
+    }
+    if (this.fireEvent("keydown", e) === false) {
+      return;
+    }
     var textarea = this.getTextArea();
     var text = textarea.value;
     var lineBreak = this.conf.lineBreak;
@@ -324,7 +331,9 @@ var Wsh;
     return lines[index];
   },
   getCurrentLine: function() {
-    if (this.currentLine) return this.currentLine;
+    if (this.currentLine) {
+      return this.currentLine;
+    }
     var lines = this.getLines();
     return lines[lines.length - 1];
   },
@@ -342,7 +351,9 @@ var Wsh;
     prompt.innerHTML = string;
   },
   getLineText: function(line) {
-    if (!line) line = this.getCurrentLine();
+    if (!line) {
+      line = this.getCurrentLine();
+    }
     var spans = line.getElementsByTagName("SPAN");
     return spans[1];
   },
@@ -351,7 +362,9 @@ var Wsh;
     return text.textContent || text.innerText;
   },
   setLineText: function(string, line) {
-    if (!line) line = this.getCurrentLine();
+    if (!line) {
+      line = this.getCurrentLine();
+    }
     this.lineContent = this.escapeHTML(string);
     this.fireEvent("beforeSetLineText", {
       dom: line,
@@ -405,6 +418,7 @@ WshHistory = function(wsh){
   wsh.addListener("keydown", this.keyDown, this);
   this.index = 0;
 };
+
 WshHistory.prototype = {
   keyDown: function(wsh, name, event){
     var keyCode = event.keyCode;

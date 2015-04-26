@@ -78,9 +78,18 @@ var Xmlash = function(conf){
 };
 
 xmlashPrototype = {
+  commandList: [
+    "HELP",
+    "SHOW",
+    "SET",
+    "USE"
+  ],
   version: "0.15 - EDGE",
   defaultPrompt: "MDX> ",
   memberPropertyToRender: "Caption",
+  getTokenizer: function() {
+    return this.tokenizer;
+  },
   getContinuationPrompt: function() {
     if (!this.continuationPrompt) {
       this.continuationPrompt = this.defaultPrompt.replace(/\w/g, " ").replace(/ >/g, "->");
@@ -95,7 +104,9 @@ xmlashPrototype = {
     ;
     tokenizer.tokenize(text);
     while (token = tokenizer.nextToken()) {
-      if (terminator) afterTerminator = true;
+      if (terminator) {
+        afterTerminator = true;
+      }
       if (token.type === "terminator") {
         terminator = true;
       }
