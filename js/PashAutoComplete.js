@@ -32,6 +32,13 @@ PashAutoComplete.prototype = {
     }
     return item;
   },
+  getSelectedWord: function(){
+    var item = this.getSelectedListItem();
+    if (!item) {
+      return null;
+    }
+    return item.firstChild.textContent;
+  },
   getListItem: function(i){
     var listDom = this.listDom;
     var childNodes = listDom.childNodes;
@@ -47,13 +54,46 @@ PashAutoComplete.prototype = {
   selectNextOrPreviousItem: function(nextOrPrevious){
     var ret;
     if(this.eachListItem(function(i, node){
+      if (node.style.display === "none") {
+        return;
+      }
       if (node.className === "selected") {
-        var item = this.getListItem(i + nextOrPrevious);
+        var j, n, item = prevItem = node, prop;
+        if (nextOrPrevious < 0) {
+          n = -nextOrPrevious;
+          prop = "previousSibling";
+        }
+        else {
+          n = nextOrPrevious;
+          prop = "nextSibling";
+        }
+        outer: for (j = 0; j < n; j++) {
+          inner: while (true) {
+            item = item[prop];
+            if (!item) {
+              item = prevItem;
+              break outer;
+            }
+            else
+            if (item.style.display !== "none") {
+              prevItem = item;
+              break inner;
+            }
+          };
+        }
         if (item) {
           node.className = "";
           item.className = "selected";
-          return false;
+          var list = item.parentNode;
+          if (item.offsetTop > list.clientHeight) {
+            list.scrollTop = (item.offsetTop + item.offsetHeight) - list.offsetHeight;
+          }
+          else
+          if (item.offsetTop < list.scrollTop) {
+            list.scrollTop = item.offsetTop;
+          }
         }
+        return false;
       }
     }, this) === false) {
       ret = true;
@@ -63,21 +103,38 @@ PashAutoComplete.prototype = {
     }
     return ret;
   },
-  selectNext: function(){
-    return this.selectNextOrPreviousItem(1);
+  selectNext: function(num){
+    if (typeof(num) === "undefined") {
+      num = 1;
+    }
+    return this.selectNextOrPreviousItem(num);
   },
-  selectPrevious: function(){
-    return this.selectNextOrPreviousItem(-1);
+  selectPrevious: function(num){
+    if (typeof(num) === "undefined") {
+      num = 1;
+    }
+    return this.selectNextOrPreviousItem(-num);
   },
   keyDown: function(source, event, data){
     var ret;
     if (this.isListShown()) {
       ret = false;
       var keyCode = data.keyCode;
+      console.log(keyCode);
       switch (keyCode) {
+        case 8:
+          this.hideList();
+          ret = true;
+          break;
         case 9:
         case 13:
           this.enterSelectedWord();
+          break;
+        case 33:  //page up
+          this.selectPrevious(5);
+          break;
+        case 34:  //page down
+          this.selectNext(5);
           break;
         case 38:  //up arrow
           this.selectPrevious();
@@ -94,40 +151,49 @@ PashAutoComplete.prototype = {
     }
     return ret;
   },
-  enterSelectedWord: function(){
-    var item = this.getSelectedListItem();
-    if (item === null) {
-      return;
-    }
-    var word = item.innerHTML;
+  getWordAtPosition: function(position){
     var pash = this.pash;
-    var line = pash.getCurrentLine();
-    var text = pash.replaceNbsp(pash.getLineTextString(line));
-    var position = Math.min(pash.getCaretPosition(), text.length);
+    var text = pash.replaceNbsp(pash.getLineTextString());
+    position = Math.min(position, text.length);
     var textTo = text.substr(0, position);
-    var tokenPartRegex = /(\b|\s*|^)?(\w*)$/;
+    var tokenPartRegex = /(\b|\W*|^)?(\w*)$/;
     var tokenPart = tokenPartRegex.exec(textTo);
     if (!tokenPart){
-      debugger;
+      return null;
     }
     tokenPart = tokenPart[2];
     var startPosition = position - tokenPart.length;
     textTo = text.substr(0, startPosition);
     var textFrom = text.substr(startPosition);
-    tokenPartRegex = /^(\w*)(\b|\w*|$)?/;
+    tokenPartRegex = /^(\w*)(\b|\W*|$)?/;
     tokenPart = tokenPartRegex.exec(textFrom);
     if (!tokenPart) {
-      debugger;
+      return null;
     }
-    tokenPart = tokenPart[1];
-    textFrom = textFrom.substr(tokenPart.length);
-    text = textTo + word + textFrom;
+    return {
+      text: text,
+      position: startPosition,
+      word: tokenPart[1]
+    };
+  },
+  enterSelectedWord: function(){
+    var word = this.getSelectedWord();
+    if (word === null) {
+      this.hideList();
+      return;
+    }
+    var pash = this.pash;
+    var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
+    if (!wordAtPosition) {
+      this.hideList();
+      return;
+    }
+    var before = wordAtPosition.text.substr(0, wordAtPosition.position);
+    var after = wordAtPosition.text.substr(wordAtPosition.position + wordAtPosition.word.length);
+    var text = before + word + after;
     pash.getTextArea().value = text;
     pash.updateText();
     this.hideList();
-    //getline text
-    //insert the word, possibly replacing current token
-    //set line text.
   },
   textChanged: function(source, event, data){
     if (this.isListShown()) {
@@ -138,128 +204,183 @@ PashAutoComplete.prototype = {
     }
   },
   checkFilterList: function(source, event, data) {
-    var text = data.text;
-    var position = data.position;
-    var from = text.substr(0, position);
-    var lastTokenRegex = /(\b|\s*|^)?(\w*)$/;
-    var lastTokenPrefix = lastTokenRegex.exec(from);
-    if (!lastTokenPrefix) {
-      debugger;
-    }
-    else {
-      var tokenPart = lastTokenPrefix[2];
-      if (tokenPart.length) {
-        var to = text.substr(position - tokenPart.length);
-        lastTokenRegex = /^(\w*)(\b|\s*|$)?/;
-        lastTokenPrefix = lastTokenRegex.exec(to);
-        if (!lastTokenPrefix) {
-          debugger;
-        }
-        else {
-          tokenPart = lastTokenPrefix[1];
-        }
-      }
-      var displayed = this.filterList(tokenPart);
-      if (displayed === 0) {
-        this.hideList();
-      }
-    }
-  },
-  checkPopupList: function(source, event, data) {
     var pash = this.pash;
-    var showList = false, words;
-    var onCount = 0;
-    var text = pash.replaceNbsp(data.text);
-    var position = Math.min(data.position, text.length);
-    var textTo = text.substr(0, position);
-    if (position > text.length) {
+    var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
+    if (!wordAtPosition) {
       return;
     }
-    var ch = text[position - 1];
+
+    var displayed = this.filterList(wordAtPosition.word);
+    if (displayed === 0) {
+      this.hideList();
+    }
+  },
+  sortWords: function(word1, word2){
+    word1 = word1.toUpperCase();
+    word2 = word2.toUpperCase();
+    var ret;
+    if (word1 < word2) {
+      ret = -1;
+    }
+    else
+    if (word1 > word2) {
+      ret = 1;
+    }
+    else {
+      ret = 0;
+    }
+    return ret;
+  },
+  checkPopupList: function(source, event, data) {
+    var showList = false, words, onCount = 0;
+    var pash = this.pash;
+    var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
+    var textBefore = wordAtPosition.text.substr(0, wordAtPosition.position);
+
+    var ch = wordAtPosition.text[data.position - 1];
     var nbsp = String.fromCharCode(160);
-    switch (ch) {
-      case "[":
-      case ".":
-      case " ":
-      case nbsp:
-        var token, tokenizer = pash.getTokenizer();
-        var enteredText = pash.getEnteredStatementText();
-        var statementText = enteredText + textTo;
-        tokenizer.tokenize(statementText);
-        var withClause = false, memberClause = false, setClause = false, asClause = false, selectClause = false, onClause = false, fromClause = false, whereClause = false;
-        while (token = tokenizer.nextToken()) {
-          switch (token.type) {
-            case "identifier":
+    var token, tokens = [], tokenizer = pash.getTokenizer();
+
+    var enteredText = pash.getEnteredStatementText();
+    var statementText = enteredText + textBefore + wordAtPosition.word;
+    tokenizer.tokenize(statementText);
+    var withClause = false, memberClause = false, setClause = false, asClause = false, selectClause = false, onClause = false, fromClause = false, whereClause = false;
+    while (token = tokenizer.nextToken()) {
+      tokens.push(token);
+      switch (token.type) {
+        case "identifier":
+          if (onClause) {
+            onClause = false;
+          }
+          switch (token.text.toUpperCase()) {
+            case "WITH":
+              withClause = true;
+              break;
+            case "MEMBER":
+              asClause = false;
+              memberClause = true;
+              setClause = false;
+              break;
+            case "SET":
+              asClause = false;
+              memberClause = false;
+              setClause = true;
+              break;
+            case "AS":
+              asClause = memberClause || setClause;
+              break;
+            case "SELECT":
+              selectClause = true;
+              break;
+            case "ON":
+              onClause = true;
+              onCount++;
+              break;
+            case "FROM":
+              fromClause = true;
+              break;
+            case "WHERE":
+              fromClause = true;
+              break;
+          }
+          break;
+        case "operator":
+          switch (token.text) {
+            case ",":
               if (onClause) {
                 onClause = false;
               }
-              switch (token.text.toUpperCase()) {
-                case "WITH":
-                  withClause = true;
-                  break;
-                case "MEMBER":
-                  asClause = false;
-                  memberClause = true;
-                  setClause = false;
-                  break;
-                case "SET":
-                  asClause = false;
-                  memberClause = false;
-                  setClause = true;
-                  break;
-                case "AS":
-                  asClause = memberClause || setClause;
-                  break;
-                case "SELECT":
-                  selectClause = true;
-                  break;
-                case "ON":
-                  onClause = true;
-                  onCount++;
-                  break;
-                case "FROM":
-                  fromClause = true;
-                  break;
-                case "WHERE":
-                  fromClause = true;
-                  break;
+              break;
+          }
+          break;
+      }
+    }
+    switch (ch) {
+      case "[":
+        //this.handleIdentifierStart();
+        break;
+      case ".":
+        //this.handleDot();
+        break;
+      case " ":
+      case nbsp:
+        if (onClause) {
+          onCount--;
+          words = [String(onCount), "Axis(" + onCount + ")"];
+          var axisAlias = [
+            "COLUMNS",
+            "ROWS",
+            "PAGES",
+            "SECTIONS",
+            "CHAPTERS"
+          ];
+          if (onCount < axisAlias.length) {
+            words.push(axisAlias[onCount]);
+          }
+        }
+        else
+        if (tokens.length === 1) {
+          switch (tokens[0].text.toUpperCase()) {
+            case "HELP":
+              words = pash.commandList;
+              break;
+            case "SET":
+              words = [];
+              var map = pash.setPropertyMap, word;
+              for (word in map) {
+                words.push(word);
               }
               break;
-            case "operator":
-              switch (token.text) {
-                case ",":
-                  if (onClause) {
-                    onClause = false;
-                  }
-                  break;
+            case "SHOW":
+              words = [];
+              var map = pash.showKeywordMethodMap, word;
+              for (word in map) {
+                words.push(word);
               }
+              break;
+            case "USE":
+              pash.getCatalogs(function(xmla, request, rowset){
+                var words = [];
+                rowset.eachRow(function(row){
+                  words.push(row.CATALOG_NAME);
+                });
+                this.populateList(words);
+                this.showList();
+              }, null, this);
               break;
           }
         }
-        switch (ch) {
-          case "[":
-            //this.handleIdentifierStart();
-            break;
-          case ".":
-            //this.handleDot();
-            break;
-          case " ":
-          case nbsp:
-            if (onClause) {
-              onCount--;
-              words = [String(onCount), "Axis(" + onCount + ")"];
-              var axisAlias = [
-                "COLUMNS",
-                "ROWS",
-                "PAGES",
-                "SECTIONS",
-                "CHAPTERS"
-              ];
-              if (onCount < axisAlias.length) {
-                words.push(axisAlias[onCount]);
-              }
+        else
+        if (tokens.length === 2 && tokens[0].text.toUpperCase() === "HELP" && tokens[0].text.toUpperCase() === "SHOW") {
+          words = [];
+          var map = pash.showKeywordMethodMap, word;
+          for (word in map) {
+            words.push(word);
+          }
+          break;
+        }
+
+        break;
+      default:
+        if (tokens.length === 1 && tokens[0].type === "identifier") {
+          words = [];
+          var prefix = tokens[0].text.toUpperCase();
+          if ("SELECT".indexOf(prefix) === 0) {
+            words.push("SELECT");
+          }
+          else
+          if ("WITH".indexOf(prefix) === 0) {
+            words.push("WITH");
+          }
+          var command, commandList = pash.commandList;
+          var i, n = commandList.length;
+          for (i = 0; i < n; i++) {
+            command = commandList[i];
+            if (command.indexOf(prefix) === 0) {
+              words.push(command);
             }
-            break;
+          }
+          words.sort(this.sortWords);
         }
     }
     if (words && words.length){
@@ -282,7 +403,7 @@ PashAutoComplete.prototype = {
     var displayed = 0;
     for (i = 0; i < n; i++){
       item = items[i];
-      word = item.innerHTML;
+      word = item.firstChild.textContent;
       if (word.toUpperCase().indexOf(matchPrefix) === 0) {
         display = "";
         displayed++;
@@ -301,18 +422,21 @@ PashAutoComplete.prototype = {
   },
   populateList: function(words){
     this.clearList();
-    var listDom = this.listDom, i, n = words.length, word, item;
+    var listDom = this.listDom, i, n = words.length, word, item, span;
     for (i = 0; i < n; i++) {
       word = words[i];
       item = document.createElement("DIV");
       if (i === 0) {
         item.className = "selected";
       }
-      item.innerHTML = word;
+      span = document.createElement("SPAN");
+      item.appendChild(span);
+      span.innerHTML = this.pash.escapeHTML(word);
       listDom.appendChild(item);
     }
   },
   showList: function(showOrHide){
+    showOrHide = showOrHide === false ? false : true;
     this.listDom.style.display = showOrHide ? "block" : "none";
   },
   hideList: function(){
@@ -326,8 +450,6 @@ PashAutoComplete.prototype = {
     this.listDom = el;
     el.className = "pash-autocomplete-list";
     this.pash.getDom().appendChild(el);
-    //this.caretPositionChanged(this.pash, "caretPositionChanged", this.pash.getCaret());
-    this.populateList(this.commandList);
   },
 };
 
