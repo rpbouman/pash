@@ -196,8 +196,8 @@ xmlashPrototype = {
       delete request.properties.Catalog;
       delete request.restrictions.CATALOG_NAME;
       var c1 = token.text.toUpperCase();
-      me.xmla.discoverDBCatalogs({
-        success: function(xmla, request, rowset){
+      me.getCatalogs(
+        function(xmla, request, rowset){
           var message = "", num = 0;
           rowset.eachRow(function(row){
             var c2 = row.CATALOG_NAME.toUpperCase();
@@ -218,13 +218,32 @@ xmlashPrototype = {
           }
           request.properties.Catalog = oldCatalog;
         },
-        error: function(){
-          request.properties.Catalog = oldCatalog;
-        }
-      });
-      request.properties.Catalog = oldCatalog;
+        null,
+        me
+      );
     }
     me.xmla.discoverDBCatalogs(request);
+  },
+  getCatalogs: function(success, error, scope){
+    var oldCatalog = this.getCurrentCatalog();
+
+    var request = this.xmlaRequest;
+    delete request.properties.Catalog;
+    delete request.restrictions.CATALOG_NAME;
+
+    request.success = function(xmla, request, rowset){
+      if (success) {
+        success.call(scope, xmla, request, rowset);
+      }
+      request.properties.Catalog = oldCatalog;
+    };
+    request.error = function(xmla, request, exception){
+      if (error) {
+        error.call(scope, xmla, request, exception);
+      }
+      request.properties.Catalog = oldCatalog;
+    };
+    this.xmla.discoverDBCatalogs(request);
   },
   renderRowset: function(rowset, fieldNames) {
     try {
