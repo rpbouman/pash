@@ -336,37 +336,51 @@ PashAutoComplete.prototype = {
             words.push(axisAlias[onCount]);
           }
         }
-        else
-        if (tokens.length === 1) {
-          switch (tokens[0].text.toUpperCase()) {
-            case "HELP":
-              words = pash.commandList;
+        else {
+          switch (tokens.length) {
+            case 1:
+              switch (tokens[0].text.toUpperCase()) {
+                case "HELP":
+                  words = pash.commandList;
+                  break;
+                case "SET":
+                  words = this.mapToWords(pash.setPropertyMap);
+                  break;
+                case "SHOW":
+                  words = this.mapToWords(pash.showKeywordMethodMap);
+                  break;
+                case "USE":
+                  pash.getCatalogs(function(xmla, request, rowset){
+                    var words = this.rowsetToWords(rowset, "CATALOG_NAME");
+                    this.populateList(words);
+                    this.showList();
+                  }, null, this);
+                  break;
+              }
               break;
-            case "SET":
-              words = this.mapToWords(pash.setPropertyMap);
+            case 2:
+              var token1 = tokens[1];
+              switch (tokens[0].text.toUpperCase()) {
+                case "HELP":
+                  switch (token1.text.toUpperCase()) {
+                    case "SET":
+                      words = this.mapToWords(pash.setPropertyMap);
+                      break;
+                    case "SHOW":
+                      words = this.mapToWords(pash.showKeywordMethodMap);
+                      break;
+                  }
+                  break;
+                case "SET":
+                  if (token1.type === "identifier") {
+                    var prop = pash.getSetProperty(tokens[1].text);
+                    if (prop && prop.values) {
+                      words = this.mapToWords(prop.values);
+                    }
+                  }
+                  break;
+              }
               break;
-            case "SHOW":
-              words = this.mapToWords(pash.showKeywordMethodMap);
-              break;
-            case "USE":
-              pash.getCatalogs(function(xmla, request, rowset){
-                var words = this.rowsetToWords(rowset, "CATALOG_NAME");
-                this.populateList(words);
-                this.showList();
-              }, null, this);
-              break;
-          }
-        }
-        else
-        if (tokens.length === 2 && tokens[0].text.toUpperCase() === "HELP" && tokens[1].text.toUpperCase() === "SHOW") {
-          words = this.mapToWords(showKeywordMethodMap);
-          break;
-        }
-        else
-        if (tokens.length === 2 && tokens[0].text.toUpperCase() === "SET" && tokens[1].type === "identifier") {
-          var prop = pash.getSetProperty(tokens[1].text);
-          if (prop && prop.values) {
-            words = this.mapToWords(prop.values);
           }
         }
         break;
@@ -387,10 +401,13 @@ PashAutoComplete.prototype = {
     if (words && words.length){
       words.sort(this.sortWords);
       this.populateList(words);
-      if (prefix){
-        this.filterList(prefix);
-      }
       showList = true;
+      if (prefix){
+        var display = this.filterList(prefix);
+        if (display === 0) {
+          showList = false;
+        }
+      }
     }
     this.showList(showList);
   },
