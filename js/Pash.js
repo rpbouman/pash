@@ -25,7 +25,6 @@ var Xmlash = function(conf){
     {
       events: Xmla.EVENT_REQUEST,
       handler: function(){
-        this.getTextArea().value = "";
         this.blockInput(true);
       },
       scope: this
@@ -72,7 +71,6 @@ var Xmlash = function(conf){
     "This program is open source."
   ];
   this.addListener("leaveLine", this.leaveLineHandler, this);
-  this.history = new exports.WshHistory(this);
   this.render();
   this.initDatasources();
 };
@@ -133,12 +131,16 @@ xmlashPrototype = {
     return this.statementLines.join("\n");
   },
   handleCommand: function(){
+    this.blockInput(true);
     var statement = this.getEnteredStatementText();
     statement = statement.substr(0, statement.lastIndexOf(";"));
     var tree = this.parse(statement);
     this.tokenizer.reset();
+    this.setTextAreaText("");
+    this.oldValue = "";
     this.statementLines.length = 0;
     this.fireEvent("commandHandled");
+    this.blockInput(false);
   },
   showExpectedError: function(expected, found, append){
     if (append !== false) {
