@@ -122,7 +122,6 @@ PashAutoComplete.prototype = {
     if (this.isListShown()) {
       ret = false;
       var keyCode = data.keyCode;
-      console.log(keyCode);
       switch (keyCode) {
         case 8:
           this.hideList();
@@ -353,7 +352,7 @@ PashAutoComplete.prototype = {
           }
         }
         else
-        if (tokens.length === 2 && tokens[0].text.toUpperCase() === "HELP" && tokens[0].text.toUpperCase() === "SHOW") {
+        if (tokens.length === 2 && tokens[0].text.toUpperCase() === "HELP" && tokens[1].text.toUpperCase() === "SHOW") {
           words = [];
           var map = pash.showKeywordMethodMap, word;
           for (word in map) {
@@ -361,7 +360,17 @@ PashAutoComplete.prototype = {
           }
           break;
         }
-
+        else
+        if (tokens.length === 2 && tokens[0].text.toUpperCase() === "SET" && tokens[1].type === "identifier") {
+          var prop = pash.getSetProperty(tokens[1].text);
+          if (prop && prop.values) {
+            words = [];
+            var map = prop.values, word;
+            for (word in map) {
+              words.push(word);
+            }
+          }
+        }
         break;
       default:
         if (tokens.length === 1 && tokens[0].type === "identifier") {
