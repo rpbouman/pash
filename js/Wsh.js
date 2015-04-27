@@ -126,10 +126,13 @@ var Wsh;
     textarea.className = Wsh.prefix + "-textarea";
     textarea.id = me.getTextAreaId();
     textarea.onkeydown = function(e) {
-      if (!e) e = win.event;
+      var textarea = me.getTextArea();
+      if (!e) {
+        e = win.event;
+      }
       win.setTimeout(function(){
         me.keyDownHandler(e);
-      }, 1)
+      }, 0);
     }
     dom.appendChild(textarea);
 
@@ -177,7 +180,7 @@ var Wsh;
           this.createLine();
         }
       }
-      textarea.value = line;
+      this.setTextAreaText(line);
       this.updateCaretPosition();
     }
     else {
@@ -197,7 +200,7 @@ var Wsh;
     }
     else {
       if (typeof(this.oldValue) === "string") {
-        textarea.value = this.oldValue;
+        this.setTextAreaText(this.oldValue);
       }
       textarea.disabled = false;
       textarea.focus();
@@ -266,6 +269,9 @@ var Wsh;
   getTextArea: function() {
     return gEl(this.getTextAreaId());
   },
+  setTextAreaText: function(text){
+    this.getTextArea().value = text;
+  },
   getTextAreaText: function() {
     return this.getTextArea().value;
   },
@@ -311,7 +317,7 @@ var Wsh;
     var dom = this.getDom();
     dom.appendChild(line);
 
-    this.getTextArea().value = "";
+    this.setTextAreaText("");
     this.fireEvent("afterCreateLine", {
       id: id,
       dom: line
@@ -390,13 +396,13 @@ var Wsh;
     var caret = this.getCaret();
     var line = this.getCurrentLine();
     var text = line.getElementsByTagName("SPAN")[1];
-    var string = text.textContent || text.innerText;
-    var head = string.substr(0, caretPosition);
-    var tail = string.substr(caretPosition);
+    var str = text.textContent || text.innerText || "";
+    var head = str.substr(0, caretPosition);
+    var tail = str.substr(caretPosition);
     text.innerHTML = this.escapeHTML(head);
     caret.style.left = text.offsetLeft + text.offsetWidth + "px";
     caret.style.top = "0px";
-    text.innerHTML = this.escapeHTML(string);
+    text.innerHTML = this.escapeHTML(str);
 
     var textArea = this.getTextArea();
     var style = textArea.style;
@@ -472,7 +478,7 @@ WshHistory.prototype = {
       this.index = oldIndex;
     }
     text = wsh.getLineTextString(line);
-    wsh.getTextArea().value = text;
+    wsh.setTextAreaText(text);
   }
 };
 
