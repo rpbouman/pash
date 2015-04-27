@@ -383,11 +383,13 @@ xmlashPrototype = {
   },
   setPropertyMap: {
     PROMPT: {
+      helpText: "Set the text that is to be used as prompt.",
       property: "defaultPrompt",
       expected: ["single quoted string", "double quoted string", "identifier"],
       setter: "setPrompt"
     },
     MEMBER_PROPERTY: {
+      helpText: "Set the member property that will be used in the headings of MDX dataset output.",
       property: "memberPropertyToRender",
       expected: ["single quoted string", "double quoted string", "identifier"],
       values: {
@@ -745,10 +747,27 @@ xmlashPrototype = {
           ;
           break;
         case "SET":
-          message +=  "<br/>Type SET &lt;property&gt; &lt;value&gt; to change the value of a Pash property." +
-                      "<br/>Properties control how Pash behaves." +
-                      "<br/>Valid properties are " + this.getSetPropertyList() + "."
-          ;
+          if (tokenizer.hasMoreTokens()) {
+            token = tokenizer.nextToken();
+            var prop = this.getSetProperty(token.text);
+            if (prop) {
+              if (prop.helpText) {
+                message +=  prop.helpText;
+              }
+              else {
+                message +=  "Set the " + token.text.toUpperCase() + " property.";
+              }
+            }
+            else {
+              message +=  "<br/>No such property: " + token.text.toUpperCase();
+            }
+          }
+          else {
+            message +=  "<br/>Type SET &lt;property&gt; &lt;value&gt; to change the value of a Pash property." +
+                        "<br/>Properties control how Pash behaves." +
+                        "<br/>Valid properties are " + this.getSetPropertyList() + "."
+            ;
+          }
           break;
         case "SHOW":
           if (tokenizer.hasMoreTokens()) {
