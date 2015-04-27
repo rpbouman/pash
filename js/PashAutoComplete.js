@@ -116,6 +116,8 @@ PashAutoComplete.prototype = {
     return this.selectNextOrPreviousItem(-num);
   },
   keyDown: function(source, event, data){
+    var pash = this.pash;
+    var textArea = pash.getTextArea();
     var ret;
     if (this.isListShown()) {
       ret = false;
@@ -191,7 +193,7 @@ PashAutoComplete.prototype = {
     var before = wordAtPosition.text.substr(0, wordAtPosition.position);
     var after = wordAtPosition.text.substr(wordAtPosition.position + wordAtPosition.word.length);
     var text = before + word + after;
-    pash.getTextArea().value = text;
+    pash.setTextAreaText(text);
     pash.updateText();
     this.hideList();
   },
