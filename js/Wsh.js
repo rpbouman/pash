@@ -246,7 +246,9 @@ var Wsh;
     else
     if (doc.selection) {
       var r = doc.selection.createRange();
-      if (r == null) return 0;
+      if (r == null) {
+        return 0;
+      }
       var re = el.createTextRange(), rc = re.duplicate();
       re.moveToBookmark(r.getBookmark());
       rc.setEndPoint('EndToStart', re);
