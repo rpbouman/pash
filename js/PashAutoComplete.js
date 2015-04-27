@@ -232,8 +232,25 @@ PashAutoComplete.prototype = {
     }
     return ret;
   },
+  arrayToWords: function(array) {
+    return array.concat([]);
+  },
+  mapToWords: function(map){
+    var words = [], word;
+    for (word in map) {
+      words.push(word);
+    }
+    return words;
+  },
+  rowsetToWords: function(rowset, column) {
+    var words = [];
+    rowset.eachRow(function(row){
+      words.push(row[column]);
+    });
+    return words;
+  },
   checkPopupList: function(source, event, data) {
-    var showList = false, words, onCount = 0;
+    var showList = false, words, prefix, onCount = 0;
     var pash = this.pash;
     var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
     var textBefore = wordAtPosition.text.substr(0, wordAtPosition.position);
@@ -326,25 +343,14 @@ PashAutoComplete.prototype = {
               words = pash.commandList;
               break;
             case "SET":
-              words = [];
-              var map = pash.setPropertyMap, word;
-              for (word in map) {
-                words.push(word);
-              }
+              words = this.mapToWords(pash.setPropertyMap);
               break;
             case "SHOW":
-              words = [];
-              var map = pash.showKeywordMethodMap, word;
-              for (word in map) {
-                words.push(word);
-              }
+              words = this.mapToWords(pash.showKeywordMethodMap);
               break;
             case "USE":
               pash.getCatalogs(function(xmla, request, rowset){
-                var words = [];
-                rowset.eachRow(function(row){
-                  words.push(row.CATALOG_NAME);
-                });
+                var words = this.rowsetToWords(rowset, "CATALOG_NAME");
                 this.populateList(words);
                 this.showList();
               }, null, this);
@@ -353,29 +359,22 @@ PashAutoComplete.prototype = {
         }
         else
         if (tokens.length === 2 && tokens[0].text.toUpperCase() === "HELP" && tokens[1].text.toUpperCase() === "SHOW") {
-          words = [];
-          var map = pash.showKeywordMethodMap, word;
-          for (word in map) {
-            words.push(word);
-          }
+          words = this.mapToWords(showKeywordMethodMap);
           break;
         }
         else
         if (tokens.length === 2 && tokens[0].text.toUpperCase() === "SET" && tokens[1].type === "identifier") {
           var prop = pash.getSetProperty(tokens[1].text);
           if (prop && prop.values) {
-            words = [];
-            var map = prop.values, word;
-            for (word in map) {
-              words.push(word);
-            }
+            words = this.mapToWords(prop.values);
           }
         }
         break;
       default:
         if (tokens.length === 1 && tokens[0].type === "identifier") {
-          words = [];
-          var prefix = tokens[0].text.toUpperCase();
+          words = this.arrayToWords(pash.commandList);
+
+          prefix = tokens[0].text.toUpperCase();
           if ("SELECT".indexOf(prefix) === 0) {
             words.push("SELECT");
           }
@@ -383,19 +382,14 @@ PashAutoComplete.prototype = {
           if ("WITH".indexOf(prefix) === 0) {
             words.push("WITH");
           }
-          var command, commandList = pash.commandList;
-          var i, n = commandList.length;
-          for (i = 0; i < n; i++) {
-            command = commandList[i];
-            if (command.indexOf(prefix) === 0) {
-              words.push(command);
-            }
-          }
-          words.sort(this.sortWords);
         }
     }
     if (words && words.length){
+      words.sort(this.sortWords);
       this.populateList(words);
+      if (prefix){
+        this.filterList(prefix);
+      }
       showList = true;
     }
     this.showList(showList);
