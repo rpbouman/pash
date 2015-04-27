@@ -217,6 +217,10 @@ var Wsh;
     var line = this.getCurrentLine();
     var keyCode = e.keyCode;
     switch (keyCode) {
+      case 16:  //shift
+      case 33:  //page up
+      case 34:  //page down
+        return;
       case 13:
         var string = text.replace(lineBreak, "");
         this.setLineText(string, line);
@@ -450,10 +454,16 @@ WshHistory.prototype = {
           return;
         };
         line = lines[idx];
-        if (line.className !== "wsh-line") continue;
+        if (line.className !== "wsh-line") {
+          continue;
+        }
         text = wsh.getLineTextString(line);
-        if (text === "") continue;
-        if (texts[text]) continue;
+        if (text === "") {
+          continue;
+        }
+        if (texts[text]) {
+          continue;
+        }
         texts[text] = true;
         break;
       };
