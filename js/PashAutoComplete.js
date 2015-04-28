@@ -264,7 +264,6 @@ PashAutoComplete.prototype = {
     tokenizer.tokenize(statementText);
     var withClause = false, memberClause = false, setClause = false, asClause = false, selectClause = false, onClause = false, fromClause = false, whereClause = false;
     while (token = tokenizer.nextToken()) {
-      tokens.push(token);
       switch (token.type) {
         case "identifier":
           if (onClause) {
@@ -272,7 +271,7 @@ PashAutoComplete.prototype = {
           }
           switch (token.text.toUpperCase()) {
             case "WITH":
-              withClause = true;
+              withClause = tokens.length;
               break;
             case "MEMBER":
               asClause = false;
@@ -288,17 +287,17 @@ PashAutoComplete.prototype = {
               asClause = memberClause || setClause;
               break;
             case "SELECT":
-              selectClause = true;
+              selectClause = tokens.length;
               break;
             case "ON":
               onClause = true;
               onCount++;
               break;
             case "FROM":
-              fromClause = true;
+              fromClause = tokens.length;
               break;
             case "WHERE":
-              fromClause = true;
+              fromClause = tokens.length;
               break;
           }
           break;
@@ -312,6 +311,7 @@ PashAutoComplete.prototype = {
           }
           break;
       }
+      tokens.push(token);
     }
     switch (ch) {
       case "[":
