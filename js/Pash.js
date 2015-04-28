@@ -758,7 +758,7 @@ xmlashPrototype = {
       text = token.text.toUpperCase();
       switch (text) {
         case "HELP":
-          message += "<br/>Type HELP &lt;commmand&gt; to get help about a specific shell command." +
+          message += "Type HELP &lt;commmand&gt; to get help about a specific shell command." +
                      "<br/>Valid values for &lt;commmand&gt; are HELP, SHOW, and USE." +
                      "<br/>Check out the tutorial:" +
                      "<br/>" + this.tutorialLine
@@ -784,7 +784,7 @@ xmlashPrototype = {
             }
           }
           else {
-            message +=  "<br/>Type SET &lt;property&gt; &lt;value&gt; to change the value of a Pash property." +
+            message +=  "Type SET &lt;property&gt; &lt;value&gt; to change the value of a Pash property." +
                         "<br/>Properties control how Pash behaves." +
                         "<br/>Valid properties are " + this.getSetPropertyList() + "."
             ;
@@ -812,7 +812,7 @@ xmlashPrototype = {
             return;
           }
           else {
-            message +=  "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
+            message +=  "Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
                         "<br/>Valid values for &lt;item&gt; are " + this.getShowKeywordList() + "." +
                         "<br/>"+
                         "<br/>SHOW CATALOGS always lists all available catalogs; SHOW CATALOG shows the current catalog." +
@@ -832,7 +832,7 @@ xmlashPrototype = {
           }
           break;
         case "USE":
-          message += "<br/>Type USE &lt;catalog&gt; to select a particular catalog to work with." +
+          message += "Type USE &lt;catalog&gt; to select a particular catalog to work with." +
                      "<br/>You can always use the SHOW CATALOGS command to list all available catalogs." +
                      "<br/>After selecting a specific catalog, you can use the other SHOW command, and execute MDX queries."
           ;
