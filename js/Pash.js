@@ -404,6 +404,24 @@ xmlashPrototype = {
     }
     return this.setPropertyMap[keyword.toUpperCase()];
   },
+  getSetPropertyValueList: function(keyword){
+    var prop;
+    switch (typeof(keyword)){
+      case "string":
+        prop = this.getSetProperty(keyword);
+        break;
+      case "object":
+        prop = keyword;
+        break;
+      default:
+        throw "Not a valid property";
+    }
+    var value, list = [];
+    for (value in prop.values) {
+      list.push(value);
+    }
+    return list.join(", ");
+  },
   getSetPropertyList: function(){
     if (!this.setPropertyList) {
       var keyword, list = "", map = this.setPropertyMap;
@@ -752,10 +770,13 @@ xmlashPrototype = {
             var prop = this.getSetProperty(token.text);
             if (prop) {
               if (prop.helpText) {
-                message +=  prop.helpText;
+                message += prop.helpText;
               }
               else {
                 message +=  "Set the " + token.text.toUpperCase() + " property.";
+              }
+              if (prop.values) {
+                message += "<br/>Valid values are: " + this.getSetPropertyValueList(prop);
               }
             }
             else {
