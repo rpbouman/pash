@@ -226,6 +226,77 @@ xmlashPrototype = {
     }
     me.xmla.discoverDBCatalogs(request);
   },
+  throwIfCatalogNotSet: function(){
+    var catalog = this.getCurrentCatalog();
+    if (!catalog) {
+      throw {
+        message: "Catalog not set"
+      };
+    }
+  },
+  getCubes: function(success, error, scope) {
+    this.throwIfCatalogNotSet();
+    var catalog = this.getCurrentCatalog();
+    var request = this.xmlaRequest;
+    var restrictions = {};
+    restrictions.CATALOG_NAME = catalog;
+    request.restrictions = restrictions;
+    request.success = function(xmla, request, rowset) {
+      if (success) {
+        success.call(scope, xmla, request, rowset);
+      }
+    };
+    request.error = function(xmla, request, rowset) {
+      if (error) {
+        error.call(scope, xmla, request, exception);
+      }
+    };
+    this.xmla.discoverMDCubes(request);
+  },
+  getDimensions: function(success, error, scope, cubeName) {
+    this.throwIfCatalogNotSet();
+    var request = this.xmlaRequest;
+    var restrictions = {};
+    var catalog = this.getCurrentCatalog();
+    restrictions.CATALOG_NAME = catalog;
+    if (cubeName) {
+      restrictions.CUBE_NAME = cubeName;
+    }
+    request.restrictions = restrictions;
+    request.success = function(xmla, request, rowset) {
+      if (success) {
+        success.call(scope, xmla, request, rowset);
+      }
+    };
+    request.error = function(xmla, request, rowset) {
+      if (error) {
+        error.call(scope, xmla, request, exception);
+      }
+    };
+    this.xmla.discoverMDDimensions(request);
+  },
+  getHierarchies: function(success, error, scope, cubeName) {
+    this.throwIfCatalogNotSet();
+    var request = this.xmlaRequest;
+    var restrictions = {};
+    var catalog = this.getCurrentCatalog();
+    restrictions.CATALOG_NAME = catalog;
+    if (cubeName) {
+      restrictions.CUBE_NAME = cubeName;
+    }
+    request.restrictions = restrictions;
+    request.success = function(xmla, request, rowset) {
+      if (success) {
+        success.call(scope, xmla, request, rowset);
+      }
+    };
+    request.error = function(xmla, request, rowset) {
+      if (error) {
+        error.call(scope, xmla, request, exception);
+      }
+    };
+    this.xmla.discoverMDHierarchies(request);
+  },
   getCatalogs: function(success, error, scope){
     var oldCatalog = this.getCurrentCatalog();
 
@@ -608,7 +679,7 @@ xmlashPrototype = {
     }
     var request = this.xmlaRequest;
     var catalog = this.getCurrentCatalog();
-    if (catalog && funcName !== "discoverDBCatalogs") {
+    if (catalog && funcName !== "discoverDBCatalogs" && funcName !== "discoverMDFunctions") {
       restrictions.CATALOG_NAME = catalog;
     }
     else {

@@ -1,6 +1,8 @@
 html, body {
   margin: 0px;
   padding: 0px;
+  font-family: Courier, monospace;
+  font-size: 12pt;
 }
 
 body {
@@ -41,8 +43,6 @@ table.dataset > tbody > tr > th {
 }
 
 .wsh {
-  font-family: Courier, monospace;
-  font-size: 12pt;
 }
 
 .short, .unsignedShort, .unsignedInt, .int {

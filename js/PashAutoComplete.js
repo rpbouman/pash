@@ -9,6 +9,12 @@ var PashAutoComplete = function(pash){
 };
 
 PashAutoComplete.prototype = {
+  dimensionDotExpressions: [
+    "Caption",
+    "Members",
+    "Name",
+    "UniqueName"
+  ],
   eachListItem: function(callback, scope){
     var listDom = this.listDom;
     var childNodes = listDom.childNodes;
@@ -133,15 +139,19 @@ PashAutoComplete.prototype = {
           break;
         case 33:  //page up
           this.selectPrevious(5);
+          pash.restoreCaretPosition();
           break;
         case 34:  //page down
           this.selectNext(5);
+          pash.restoreCaretPosition();
           break;
         case 38:  //up arrow
           this.selectPrevious();
+          pash.restoreCaretPosition();
           break;
         case 40:  //down arrow
           this.selectNext();
+          pash.restoreCaretPosition();
           break;
         default:
           ret = true;
@@ -155,26 +165,32 @@ PashAutoComplete.prototype = {
   getWordAtPosition: function(position){
     var pash = this.pash;
     var text = pash.replaceNbsp(pash.getLineTextString());
+    if (typeof(position) === "undefined") {
+      position = pash.getCaretPosition() - 1;
+    }
     position = Math.min(position, text.length);
     var textTo = text.substr(0, position);
-    var tokenPartRegex = /(\b|\W*|^)?(\w*)$/;
+    var tokenPartRegex = /(\b|^|\[|\W)?(\w*)$/;
     var tokenPart = tokenPartRegex.exec(textTo);
     if (!tokenPart){
       return null;
     }
-    tokenPart = tokenPart[2];
-    var startPosition = position - tokenPart.length;
+    var startPosition = position - tokenPart[2].length;
+    if (tokenPart[1] === "[") {
+      startPosition--;
+    }
     textTo = text.substr(0, startPosition);
     var textFrom = text.substr(startPosition);
-    tokenPartRegex = /^(\w*)(\b|\W*|$)?/;
+    tokenPartRegex = /^(\[?\w*)(\]|\b|$|\W)?/;
     tokenPart = tokenPartRegex.exec(textFrom);
     if (!tokenPart) {
       return null;
     }
+    word = tokenPart[1];
     return {
       text: text,
       position: startPosition,
-      word: tokenPart[1]
+      word: word
     };
   },
   enterSelectedWord: function(){
@@ -184,7 +200,8 @@ PashAutoComplete.prototype = {
       return;
     }
     var pash = this.pash;
-    var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
+    var position = pash.getCaretPosition() - 1;
+    var wordAtPosition = this.getWordAtPosition(position);
     if (!wordAtPosition) {
       this.hideList();
       return;
@@ -194,6 +211,7 @@ PashAutoComplete.prototype = {
     var text = before + word + after;
     pash.setTextAreaText(text);
     pash.updateText();
+    pash.setCaretPosition(wordAtPosition.position + word.length);
     this.hideList();
   },
   textChanged: function(source, event, data){
@@ -206,7 +224,8 @@ PashAutoComplete.prototype = {
   },
   checkFilterList: function(source, event, data) {
     var pash = this.pash;
-    var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
+    var position = pash.getCaretPosition();
+    var wordAtPosition = this.getWordAtPosition(position);
     if (!wordAtPosition) {
       return;
     }
@@ -216,7 +235,7 @@ PashAutoComplete.prototype = {
       this.hideList();
     }
   },
-  sortWords: function(word1, word2){
+  wordSorter: function(word1, word2){
     word1 = word1.toUpperCase();
     word2 = word2.toUpperCase();
     var ret;
@@ -232,6 +251,9 @@ PashAutoComplete.prototype = {
     }
     return ret;
   },
+  sortWords: function(words){
+    return words.sort(this.wordSorter);
+  },
   arrayToWords: function(array) {
     return array.concat([]);
   },
@@ -245,9 +267,56 @@ PashAutoComplete.prototype = {
   rowsetToWords: function(rowset, column) {
     var words = [];
     rowset.eachRow(function(row){
-      words.push(row[column]);
+      word = row[column];
+      if (word.charAt("0") !== "[" && word.charAt(word.length - 1) !== "]") {
+        word = "[" + row[column] + "]";
+      }
+      words.push(word);
     });
     return words;
+  },
+  rowsetToMap: function(rowset, column, map) {
+    if (!map){
+      map = {};
+    }
+    rowset.eachRow(function(row){
+      word = row[column];
+      if (word.charAt("0") !== "[" && word.charAt(word.length - 1) !== "]") {
+        word = "[" + row[column] + "]";
+      }
+      map[word] = word;
+    });
+    return map;
+  },
+  popupCatalogsList: function(prefix){
+    pash.getCatalogs(function(xmla, request, rowset){
+      var words = this.rowsetToWords(rowset, "CATALOG_NAME");
+      this.populateList(words);
+      if (prefix) {
+        this.filterList(prefix);
+      }
+      this.showList();
+    }, null, this);
+  },
+  getIdentifierChain: function(tokens){
+    var i, token, expect = ".", identifiers = [];
+    for (i = tokens.length - 1; i >= 0; i--) {
+      token = tokens[i];
+      if (expect === "." && token.type === "operator" && token.text === ".") {
+        expect = "identifier";
+        continue;
+      }
+      else
+      if (expect === "identifier" && (token.type === "identifier" || token.type === "square braces")) {
+        expect = "dot";
+        identifiers.unshift(token);
+        continue;
+      }
+      else {
+        break;
+      }
+    }
+    return identifiers;
   },
   checkPopupList: function(source, event, data) {
     var showList = false, words, prefix, onCount = 0;
@@ -262,25 +331,30 @@ PashAutoComplete.prototype = {
     var enteredText = pash.getEnteredStatementText();
     var statementText = enteredText + textBefore + wordAtPosition.word;
     tokenizer.tokenize(statementText);
-    var withClause = false, memberClause = false, setClause = false, asClause = false, selectClause = false, onClause = false, fromClause = false, whereClause = false;
+    var withClause = false,
+        memberClause = false,
+        setClause = false,
+        asClause = false,
+        selectClause = false,
+        onClause = false,
+        fromClause = false,
+        whereClause = false
+    ;
     while (token = tokenizer.nextToken()) {
       switch (token.type) {
         case "identifier":
-          if (onClause) {
-            onClause = false;
-          }
           switch (token.text.toUpperCase()) {
             case "WITH":
               withClause = tokens.length;
               break;
             case "MEMBER":
               asClause = false;
-              memberClause = true;
+              memberClause = tokens.length;
               setClause = false;
               break;
             case "SET":
               asClause = false;
-              memberClause = false;
+              memberClause = tokens.length;
               setClause = true;
               break;
             case "AS":
@@ -290,14 +364,14 @@ PashAutoComplete.prototype = {
               selectClause = tokens.length;
               break;
             case "ON":
-              onClause = true;
+              onClause = tokens.length;
               onCount++;
               break;
             case "FROM":
               fromClause = tokens.length;
               break;
             case "WHERE":
-              fromClause = tokens.length;
+              whereClause = tokens.length;
               break;
           }
           break;
@@ -315,14 +389,100 @@ PashAutoComplete.prototype = {
     }
     switch (ch) {
       case "[":
-        //this.handleIdentifierStart();
+        if (tokens.length === 1 && tokens[0].text.toUpperCase() === "USE") {
+          var prefix, word = this.getWordAtPosition();
+          if (word) {
+            prefix = word.word;
+          }
+          this.popupCatalogsList(prefix);
+        }
+        else
+        if (withClause !== false || selectClause !== false) {
+
+          var identifiers = this.getIdentifierChain(tokens);
+          if (fromClause) {
+            if (whereClause === false && identifiers.length === 0) {
+              try {
+                pash.getCubes(function(xmla, request, rowset){
+                  var words = this.rowsetToWords(rowset, "CUBE_NAME");
+                  this.populateList(words);
+                  this.showList();
+                }, null, this);
+              }
+              catch (exception){
+                //probably no catalog set.
+              }
+              break;
+            }
+            var cubeName;
+            if (fromClause + 1 < tokens.length) {
+              token = tokens[fromClause + 1];
+              switch (token.type) {
+                case "identifier":
+                  cubeName = token.text;
+                  break;
+                case "square braces":
+                  cubeName = token.text.substr(1, token.text.length - 2);
+                  break;
+              }
+            }
+          }
+
+          switch (identifiers.length) {
+            case 0: //0 leading identifiers.
+              //next identifier should be either a hierarchy or a dimension,
+              //so populate the list with hierarchy and dimension identifiers (deduplicate).
+              try {
+                pash.getDimensions(function(xmla, request, rowset) {
+                  var map = this.rowsetToMap(rowset, "DIMENSION_NAME");
+                  pash.getHierarchies(function(xmla, request, rowset) {
+                    map = this.rowsetToMap(rowset, "HIERARCHY_NAME", map);
+                    var words = this.mapToWords(map);
+                    this.sortWords(words);
+                    this.populateList(words);
+                    this.showList();
+                  }, null, this, cubeName);
+                }, null, this, cubeName);
+              }
+              catch (exception){
+                //probably no catalog set.
+              }
+              break;
+            case 1: //1 leading identifier.
+              //leading identifier might be a hierarchy or a dimension.
+              //check if we can find out which one it is.
+              //
+              //if we know for sure it is a dimension check its hierarchies:
+              //  - if there is one hierarchy and its name is identical to the dimension name
+              //    - add its levels to the list
+              //    - add its default member to the list, highlight it.
+              //  - if there is one hierarchy and its name is not identical to the dimension name, populate the list with that hierarchy and highlight it
+              //  - if there are multiple hierarchies  populate this list with hierarchies and highlight the DEFAULT_HIERARCHY
+              //
+              //if the DIMENSION_CARDINALITY is low, add members to the list
+              //if we add members, then see if the dimension is unique.
+              //  - if unique, use member names
+              //  - if not unique, use member keys (with & notation)
+              break;
+            case 2: //2 leading identifiers
+              //identifier 1 might be a dimension or a hierarchy. figure out which on it is.
+              break;
+          }
+        }
         break;
       case ".":
-        //this.handleDot();
+        var identifiers = this.getIdentifierChain(tokens);
+        if (identifiers.length === 1) {
+          words = this.dimensionDotExpressions;
+        }
         break;
       case " ":
       case nbsp:
-        if (onClause) {
+        if (withClause !== false && selectClause === false && memberClause === false && setClause === false) {
+          words = ["MEMBER", "SET"];
+        }
+        else
+        if (onClause === tokens.length -1) {
           onCount--;
           words = [String(onCount), "Axis(" + onCount + ")"];
           var axisAlias = [
@@ -335,6 +495,28 @@ PashAutoComplete.prototype = {
           if (onCount < axisAlias.length) {
             words.push(axisAlias[onCount]);
           }
+        }
+        else
+        if (onClause && fromClause === false) {
+          words = ["FROM"];
+        }
+        else
+        if (fromClause === tokens.length - 1) {
+          try {
+            pash.getCubes(function(xmla, request, rowset){
+              var words = this.rowsetToWords(rowset, "CUBE_NAME");
+              this.populateList(words);
+              this.showList();
+            }, null, this);
+          }
+          catch (exception) {
+            //probably no catalog set
+          }
+          break;
+        }
+        else
+        if (fromClause === tokens.length -2 && whereClause === false){
+          words = ["WHERE"];
         }
         else {
           switch (tokens.length) {
@@ -350,11 +532,7 @@ PashAutoComplete.prototype = {
                   words = this.mapToWords(pash.showKeywordMethodMap);
                   break;
                 case "USE":
-                  pash.getCatalogs(function(xmla, request, rowset){
-                    var words = this.rowsetToWords(rowset, "CATALOG_NAME");
-                    this.populateList(words);
-                    this.showList();
-                  }, null, this);
+                  this.popupCatalogsList();
                   break;
               }
               break;
@@ -385,21 +563,28 @@ PashAutoComplete.prototype = {
         }
         break;
       default:
+        if ((tokens.length === 1 || tokens.length === 2) && (tokens[0].text.toUpperCase() === "USE")) {
+          var prefix, word = this.getWordAtPosition();
+          if (word) {
+            prefix = word.word;
+          }
+          this.popupCatalogsList(prefix);
+        }
+        else
         if (tokens.length === 1 && tokens[0].type === "identifier") {
           words = this.arrayToWords(pash.commandList);
-
           prefix = tokens[0].text.toUpperCase();
-          if ("SELECT".indexOf(prefix) === 0) {
+          try {
+            pash.throwIfCatalogNotSet();
             words.push("SELECT");
-          }
-          else
-          if ("WITH".indexOf(prefix) === 0) {
             words.push("WITH");
+          }
+          catch (exception) {
           }
         }
     }
     if (words && words.length){
-      words.sort(this.sortWords);
+      this.sortWords(words);
       this.populateList(words);
       showList = true;
       if (prefix){
@@ -471,7 +656,7 @@ PashAutoComplete.prototype = {
     var el = document.createElement("DIV");
     this.listDom = el;
     el.className = "pash-autocomplete-list";
-    this.pash.getDom().appendChild(el);
+    document.body.insertBefore(el, this.pash.getDom());
   },
 };
 

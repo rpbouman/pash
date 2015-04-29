@@ -212,6 +212,12 @@ var Wsh;
       return;
     }
     if (this.fireEvent("keydown", e) === false) {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      else {
+        e.returnValue = false;
+      }
       return;
     }
     var textarea = this.getTextArea();
@@ -223,6 +229,9 @@ var Wsh;
       case 16:  //shift
       case 33:  //page up
       case 34:  //page down
+      case 38:  //arrow up
+      case 40:  //arrow down
+        this.restoreCaretPosition();
         return;
       case 13:
         var string = text.replace(lineBreak, "");
@@ -262,6 +271,24 @@ var Wsh;
       return rc.text.length;
     }
     return 0;
+  },
+  restoreCaretPosition: function(){
+    this.setCaretPosition(this.prevCaretPosition);
+  },
+  setCaretPosition: function(position){
+    var el = this.getTextArea();
+    if (el.setSelectionRange) {
+      el.setSelectionRange(position, position);
+    }
+    else
+    if (el.createTextRange) {
+      var range = el.createTextRange();
+      range.collapse(true);
+      range.moveStart("character", position);
+      range.moveEnd("character", position);
+      range.select();
+    }
+    this.updateCaretPosition();
   },
   getDom: function() {
     return gEl(this.getId());
@@ -392,6 +419,7 @@ var Wsh;
   },
   updateCaretPosition: function() {
     var caretPosition = this.getCaretPosition();
+    this.prevCaretPosition = caretPosition;
     var prompt = this.getLinePrompt();
     var caret = this.getCaret();
     var line = this.getCurrentLine();
@@ -451,7 +479,7 @@ WshHistory.prototype = {
         return;
     }
     var lines = wsh.getLines(), line, text, texts = {};
-    while (this.index > i++) {
+    while (this.index > i) {
       while (true) {
         ++l;
         idx = lines.length - l;
@@ -473,12 +501,14 @@ WshHistory.prototype = {
         texts[text] = true;
         break;
       };
+      i++;
     }
     if (!line) {
       this.index = oldIndex;
     }
     text = wsh.getLineTextString(line);
     wsh.setTextAreaText(text);
+    wsh.updateText();
   }
 };
 
