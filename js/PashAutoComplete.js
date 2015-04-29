@@ -598,8 +598,11 @@ PashAutoComplete.prototype = {
   },
   caretPositionChanged: function(source, event, data){
     var style = this.listDom.style;
-    style.left = (data.offsetLeft + 10) + "px";
-    style.top = (data.parentNode.offsetTop - 90) + "px";
+    style.left = (data.offsetLeft + 15) + "px";
+    var line = data.parentNode;
+    var pashDom = this.pash.getDom();
+    var myDom = this.listDom;
+    style.top = (line.offsetTop - 95) - (pashDom.scrollTop) + "px";
   },
   clearList: function(){
     this.listDom.innerHTML = "";
