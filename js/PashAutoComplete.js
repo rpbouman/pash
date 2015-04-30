@@ -318,12 +318,13 @@ PashAutoComplete.prototype = {
     return this.selectNextOrPreviousItem(-num);
   },
   keyDown: function(source, event, data){
+    var me = this;
     var pash = this.pash;
     var textArea = pash.getTextArea();
     var ret;
+    var keyCode = data.keyCode;
     if (this.isListShown()) {
       ret = false;
-      var keyCode = data.keyCode;
       switch (keyCode) {
         case 8:
           this.hideList();
@@ -847,11 +848,20 @@ PashAutoComplete.prototype = {
     var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
     var textBefore = wordAtPosition.text.substr(0, wordAtPosition.position);
 
-    var ch = wordAtPosition.text[data.position - 1];
+    var ch;
+    if (data.position === 0 && wordAtPosition.word === "") {
+      ch = "\n";
+    }
+    else {
+      ch = wordAtPosition.text[data.position - 1];
+    }
     var nbsp = String.fromCharCode(160);
     var token, tokens = [], tokenizer = pash.getTokenizer();
 
     var enteredText = pash.getEnteredStatementText();
+    if (enteredText) {
+      enteredText += "\n";
+    }
     var statementText = enteredText + textBefore + wordAtPosition.word;
     tokenizer.tokenize(statementText);
     var withClause = false,
@@ -1016,6 +1026,7 @@ PashAutoComplete.prototype = {
             }
         }
         break;
+      case "\n":
       case " ":
       case nbsp:
         if (
