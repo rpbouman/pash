@@ -73,6 +73,7 @@ var Xmlash = function(conf){
   this.addListener("leaveLine", this.leaveLineHandler, this);
   this.render();
   this.initDatasources();
+  this.schemaCache = {};
 };
 
 xmlashPrototype = {
@@ -181,6 +182,7 @@ xmlashPrototype = {
         this.showCurrentCatalog();
         this.prompt = this.defaultPrompt;
         i++;
+        this.schemaCache = {};
       }, me);
       if (i !== 1) {
         var msg;
@@ -234,68 +236,238 @@ xmlashPrototype = {
       };
     }
   },
-  getCubes: function(success, error, scope) {
-    this.throwIfCatalogNotSet();
-    var catalog = this.getCurrentCatalog();
-    var request = this.xmlaRequest;
-    var restrictions = {};
-    restrictions.CATALOG_NAME = catalog;
-    request.restrictions = restrictions;
-    request.success = function(xmla, request, rowset) {
-      if (success) {
-        success.call(scope, xmla, request, rowset);
+  testFilter: function(row, restrictions){
+    var column, field, value;
+    for (column in restrictions) {
+      field = row[column];
+      if (typeof(field) === "undefined") {
+        throw "No such field " + column;
       }
-    };
-    request.error = function(xmla, request, rowset) {
-      if (error) {
-        error.call(scope, xmla, request, exception);
+      if (restrictions[column] !== field) {
+        return false;
       }
-    };
-    this.xmla.discoverMDCubes(request);
-  },
-  getDimensions: function(success, error, scope, cubeName) {
-    this.throwIfCatalogNotSet();
-    var request = this.xmlaRequest;
-    var restrictions = {};
-    var catalog = this.getCurrentCatalog();
-    restrictions.CATALOG_NAME = catalog;
-    if (cubeName) {
-      restrictions.CUBE_NAME = cubeName;
     }
-    request.restrictions = restrictions;
-    request.success = function(xmla, request, rowset) {
-      if (success) {
-        success.call(scope, xmla, request, rowset);
-      }
-    };
-    request.error = function(xmla, request, rowset) {
-      if (error) {
-        error.call(scope, xmla, request, exception);
-      }
-    };
-    this.xmla.discoverMDDimensions(request);
+    return true;
   },
-  getHierarchies: function(success, error, scope, cubeName) {
-    this.throwIfCatalogNotSet();
-    var request = this.xmlaRequest;
-    var restrictions = {};
-    var catalog = this.getCurrentCatalog();
-    restrictions.CATALOG_NAME = catalog;
-    if (cubeName) {
-      restrictions.CUBE_NAME = cubeName;
+  filter: function(rowset, restrictions){
+    if (!restrictions) {
+      return rowset;
     }
-    request.restrictions = restrictions;
-    request.success = function(xmla, request, rowset) {
-      if (success) {
-        success.call(scope, xmla, request, rowset);
+    var filteredRowset = [], i, row, n = rowset.length;
+    for (i = 0; i < n; i++) {
+      row = rowset[i];
+      if (this.testFilter(row, restrictions)){
+        filteredRowset.push(row);
       }
-    };
-    request.error = function(xmla, request, rowset) {
-      if (error) {
-        error.call(scope, xmla, request, exception);
+    }
+    return filteredRowset;
+  },
+  getCubes: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var cubes = this.schemaCache.cubes;
+    if (cubes) {
+      cubes = this.filter(cubes, filter)
+      success.call(scope, cubes);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      var request = {
+        restrictions: {
+          CATALOG_NAME: catalog
+        },
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        me.schemaCache.cubes = rowset.fetchAllAsObject();
+        if (success) {
+          me.getCubes(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDCubes(request);
+    }
+  },
+  getDimensions: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var dimensions = this.schemaCache.dimensions;
+    if (dimensions) {
+      dimensions = this.filter(dimensions, filter);
+      success.call(scope, dimensions);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      var request = {
+        restrictions: {
+          CATALOG_NAME: catalog
+        },
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        var dimensions = [];
+        rowset.eachRow(function(dimension){
+          //only store dimensions that belong to a cube.
+          if (
+            dimension.CUBE_NAME &&
+            dimension.DIMENSION_IS_VISIBLE === true
+          ) {
+            dimensions.push(dimension);
+          }
+        });
+        me.schemaCache.dimensions = dimensions;
+        if (success) {
+          me.getDimensions(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDDimensions(request);
+    }
+  },
+  getHierarchies: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var hierarchies = this.schemaCache.hierarchies;
+    if (hierarchies) {
+      hierarchies = this.filter(hierarchies, filter);
+      success.call(scope, hierarchies);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      var request = {
+        restrictions: {
+          CATALOG_NAME: catalog
+        },
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        var hierarchies = [];
+        rowset.eachRow(function(hierarchy){
+          if (
+            hierarchy.CUBE_NAME &&
+            hierarchy.DIMENSION_IS_VISIBLE === true &&
+            hierarchy.HIERARCHY_IS_VISIBLE === true
+          ) {
+            hierarchies.push(hierarchy);
+          }
+        });
+        me.schemaCache.hierarchies = hierarchies;
+        if (success) {
+          me.getHierarchies(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDHierarchies(request);
+    }
+  },
+  getLevels: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var levels = this.schemaCache.levels;
+    if (levels) {
+      levels = this.filter(levels, filter);
+      success.call(scope, levels);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      var request = {
+        restrictions: {
+          CATALOG_NAME: catalog
+        },
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        var levels = [];
+        rowset.eachRow(function(level){
+          if (
+            level.CUBE_NAME &&
+            level.LEVEL_IS_VISIBLE === true
+          ) {
+            levels.push(level);
+          }
+        });
+        me.schemaCache.levels = levels;
+        if (success) {
+          me.getLevels(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDLevels(request);
+    }
+  },
+  getMembers: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var schemaCache = this.schemaCache;
+    var _members, members = this.schemaCache.members;
+    if (!members) {
+      schemaCache.members = members = {};
+    }
+    var key = "", filterProp, filterValue, restrictions = {};
+    for (filterProp in filter) {
+      if (key !== "") {
+        key += ";"
       }
-    };
-    this.xmla.discoverMDHierarchies(request);
+      filterValue = filter[filterProp];
+      key += filterProp + "=" + filterValue;
+      restrictions[filterProp] = filterValue;
+    }
+    _members = members[key];
+    if (_members) {
+      success.call(scope, _members);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      restrictions.CATALOG_NAME = catalog;
+      var request = {
+        restrictions: restrictions,
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        var members = [];
+        rowset.eachRow(function(member){
+          if (member.CUBE_NAME) {
+            members.push(member);
+          }
+        });
+        me.schemaCache.members[key] = members;
+        if (success) {
+          me.getMembers(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDMembers(request);
+    }
   },
   getCatalogs: function(success, error, scope){
     var oldCatalog = this.getCurrentCatalog();

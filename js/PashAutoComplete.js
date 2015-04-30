@@ -8,13 +8,209 @@ var PashAutoComplete = function(pash){
   this.createDom();
 };
 
+var allMembersDotExpression = {
+      type: "set",
+      caption: "AllMembers"
+    },
+    captionDotExpression = {
+      type: "string",
+      caption: "Caption"
+    },
+    childrenDotExpression = {
+      type: "set",
+      caption: "Children"
+    },
+    countDotExpression = {
+      type: "integer",
+      caption: "Count"
+    },
+    currentDotExpression = {
+      type: "member",
+      caption: "Current"
+    },
+    currentMemberDotExpression = {
+      type: "member",
+      caption: "CurrentMember"
+    },
+    currentOrdinalDotExpression = {
+      type: "integer",
+      caption: "CurrentOrdinal"
+    },
+    defaultMemberDotExpression = {
+      type: "member",
+      caption: "DefaultMember"
+    },
+    dimensionDotExpression = {
+      type: "dimension",
+      caption: "Dimension"
+    },
+    firstChildDotExpression = {
+      type: "member",
+      caption: "FirstChild"
+    },
+    firstSiblingDotExpression = {
+      type: "member",
+      caption: "FirstSibling"
+    },
+    hierarchyDotExpression = {
+      type: "hierarchy",
+      caption: "Hierarchy"
+    },
+    itemDotExpression = {
+      type: "member",
+      caption: "Item"
+    },
+    lagDotExpression = {
+      type: "member",
+      caption: "Lag"
+    },
+    lastChildDotExpression = {
+      type: "member",
+      caption: "LastChild"
+    },
+    lastSiblingDotExpression = {
+      type: "member",
+      caption: "LastSibling"
+    },
+    leadDotExpression = {
+      type: "member",
+      caption: "Lead"
+    },
+    levelDotExpression = {
+      type: "level",
+      caption: "Level"
+    },
+    levelsDotExpression = {
+      type: "level",
+      caption: "Levels"
+    },
+    membersDotExpression = {
+      type: "set",
+      caption: "Members"
+    },
+    memberValueDotExpression = {
+      type: "string",
+      caption: "MemberValue"
+    },
+    nameDotExpression = {
+      type: "string",
+      caption: "Name"
+    },
+    nextMemberDotExpression = {
+      type: "member",
+      caption: "NextMember"
+    },
+    ordinalDotExpression = {
+      type: "integer",
+      caption: "Ordinal"
+    },
+    parentDotExpression = {
+      type: "member",
+      caption: "Parent"
+    },
+    prevMemberDotExpression = {
+      type: "member",
+      caption: "PrevMember"
+    },
+    propertiesDotExpression = {
+      type: "string",
+      caption: "Properties"
+    },
+    siblingsDotExpression = {
+      type: "set",
+      caption: "Siblings"
+    },
+    uniqueNameDotExpression = {
+      type: "string",
+      caption: "UniqueName"
+    },
+    unknownMemberDotExpression = {
+      type: "member",
+      caption: "UnknownMember"
+    },
+    valueDotExpression = {
+      type: "string",
+      caption: "Value"
+    };
+
 PashAutoComplete.prototype = {
-  dimensionDotExpressions: [
-    "Caption",
-    "Members",
-    "Name",
-    "UniqueName"
+  dimensionDotExpressions: {
+    CAPTION: captionDotExpression,
+    NAME: nameDotExpression,
+    UNIQUENAME: uniqueNameDotExpression
+  },
+  hierarchyDotExpressions: {
+    ALLMEMBERS: allMembersDotExpression,
+    CAPTION: captionDotExpression,
+    CURRENTMEMBER: currentMemberDotExpression,
+    DEFAULTMEMBER: defaultMemberDotExpression,
+    DIMENSION: dimensionDotExpression,
+    LEVELS: levelsDotExpression,
+    MEMBERS: membersDotExpression,
+    NAME: nameDotExpression,
+    UNIQUENAME: uniqueNameDotExpression,
+    UNKNOWNMEMBER: unknownMemberDotExpression
+  },
+  levelDotExpressions: {
+    ALLMEMBERS: allMembersDotExpression,
+    DIMENSION: dimensionDotExpression,
+    HIERARCHY: hierarchyDotExpression,
+    MEMBERS: membersDotExpression,
+    NAME: nameDotExpression,
+    ORDINAL: ordinalDotExpression,
+    UNIQUENAME: uniqueNameDotExpression
+  },
+  memberDotExpressions: {
+    CAPTION: captionDotExpression,
+    CHILDREN: childrenDotExpression,
+    DIMENSION: dimensionDotExpression,
+    FIRSTCHILD: firstChildDotExpression,
+    FIRSTSIBLING: firstSiblingDotExpression,
+    HIERARCHY: hierarchyDotExpression,
+    LAG: lagDotExpression,
+    LASTCHILD: lastChildDotExpression,
+    LASTSIBLING: lastSiblingDotExpression,
+    LEAD: leadDotExpression,
+    LEVEL: levelDotExpression,
+    MEMBERVALUE: memberValueDotExpression,
+    NAME: nameDotExpression,
+    NEXTMEMBER: nextMemberDotExpression,
+    PARENT: parentDotExpression,
+    PREVMEMBER: prevMemberDotExpression,
+    PROPERTIES: propertiesDotExpression,
+    SIBLINGS: siblingsDotExpression,
+    UNIQUENAME: uniqueNameDotExpression,
+    UNKNOWNMEMBER: unknownMemberDotExpression,
+    VALUE: valueDotExpression
+  },
+  setDotExpressions: {
+    COUNT: countDotExpression,
+    CURRENT: currentDotExpression,
+    CURRENTORDINAL: currentOrdinalDotExpression,
+    ITEM: itemDotExpression
+  },
+  //https://msdn.microsoft.com/en-us/library/ms145573.aspx
+  intrinsicCellProperties: [
+    "ACTION_TYPE",
+    "BACK_COLOR",
+    "CELL_ORDINAL",
+    "FONT_FLAGS",
+    "FONT_NAME",
+    "FONT_SIZE",
+    "FORE_COLOR",
+    "FORMAT",
+    "FORMAT_STRING",
+    "FORMATTED_VALUE",
+    "LANGUAGE",
+    "UPDATEABLE",
+    "VALUE"
   ],
+  getDotExpressionsMapForType: function(type) {
+    var dotExpressionsMap;
+    var name = type + "DotExpressions";
+    var map = this[name];
+    return map;
+  },
   eachListItem: function(callback, scope){
     var listDom = this.listDom;
     var childNodes = listDom.childNodes;
@@ -133,8 +329,10 @@ PashAutoComplete.prototype = {
           this.hideList();
           ret = true;
           break;
+          //tab, return, space and arrow right select and insert the selection.
         case 9:
         case 13:
+        case 39:
           this.enterSelectedWord();
           break;
         case 33:  //page up
@@ -170,7 +368,7 @@ PashAutoComplete.prototype = {
     }
     position = Math.min(position, text.length);
     var textTo = text.substr(0, position);
-    var tokenPartRegex = /(\b|^|\[|\W)?(\w*)$/;
+    var tokenPartRegex = /(\b|^|\[|\W)?(\w*|[,\{\}\(\)])$/;
     var tokenPart = tokenPartRegex.exec(textTo);
     if (!tokenPart){
       return null;
@@ -181,7 +379,7 @@ PashAutoComplete.prototype = {
     }
     textTo = text.substr(0, startPosition);
     var textFrom = text.substr(startPosition);
-    tokenPartRegex = /^(\[?\w*)(\]|\b|$|\W)?/;
+    tokenPartRegex = /^([,\{\}\(\)]|\[?\w*)(\]|\b|$|\W)?/;
     tokenPart = tokenPartRegex.exec(textFrom);
     if (!tokenPart) {
       return null;
@@ -215,10 +413,14 @@ PashAutoComplete.prototype = {
     this.hideList();
   },
   textChanged: function(source, event, data){
+    var displayed = 0;
     if (this.isListShown()) {
-      this.checkFilterList(source, event, data);
+      displayed = this.checkFilterList(source, event, data);
     }
-    else {
+    if (displayed === 0) {
+      this.hideList();
+    }
+    if (!this.isListShown()) {
       this.checkPopupList(source, event, data);
     }
   },
@@ -229,11 +431,11 @@ PashAutoComplete.prototype = {
     if (!wordAtPosition) {
       return;
     }
-
-    var displayed = this.filterList(wordAtPosition.word);
-    if (displayed === 0) {
+    if (wordAtPosition.word === "") {
       this.hideList();
+      return 0;
     }
+    return this.filterList(wordAtPosition.word);
   },
   wordSorter: function(word1, word2){
     word1 = word1.toUpperCase();
@@ -265,27 +467,42 @@ PashAutoComplete.prototype = {
     return words;
   },
   rowsetToWords: function(rowset, column) {
+    if (rowset instanceof Xmla.Rowset) {
+      rowset = rowset.fetchAllAsObject();
+    }
+
+    if (!(rowset instanceof Array)) {
+      throw "Not an array";
+    }
+
     var words = [];
-    rowset.eachRow(function(row){
+    var row, i, n = rowset.length;
+    for (i = 0; i < n; i++) {
+      row = rowset[i];
       word = row[column];
-      if (word.charAt("0") !== "[" && word.charAt(word.length - 1) !== "]") {
-        word = "[" + row[column] + "]";
-      }
+      word = this.brace(word);
       words.push(word);
-    });
+    }
     return words;
   },
   rowsetToMap: function(rowset, column, map) {
+    if (rowset instanceof Xmla.Rowset) {
+      rowset = rowset.fetchAllAsObject();
+    }
+    if (!(rowset instanceof Array)) {
+      throw "Not an array";
+    }
+
     if (!map){
       map = {};
     }
-    rowset.eachRow(function(row){
+    var row, i, n = rowset.length;
+    for (i = 0; i < n; i++) {
+      row = rowset[i];
       word = row[column];
-      if (word.charAt("0") !== "[" && word.charAt(word.length - 1) !== "]") {
-        word = "[" + row[column] + "]";
-      }
+      word = this.brace(word);
       map[word] = word;
-    });
+    }
     return map;
   },
   popupCatalogsList: function(prefix){
@@ -295,7 +512,7 @@ PashAutoComplete.prototype = {
       if (prefix) {
         this.filterList(prefix);
       }
-      this.showList();
+      this.showList(true);
     }, null, this);
   },
   getIdentifierChain: function(tokens){
@@ -308,7 +525,7 @@ PashAutoComplete.prototype = {
       }
       else
       if (expect === "identifier" && (token.type === "identifier" || token.type === "square braces")) {
-        expect = "dot";
+        expect = ".";
         identifiers.unshift(token);
         continue;
       }
@@ -317,6 +534,311 @@ PashAutoComplete.prototype = {
       }
     }
     return identifiers;
+  },
+  isBraced: function(string) {
+    return string.charAt("0") === "[" && string.charAt(string.length - 1) === "]";
+  },
+  brace: function(string){
+    if (!this.isBraced(string)){
+      string = "[" + string + "]";
+    }
+    return string;
+  },
+  stripBraces: function(token) {
+    var strip, type = typeof(token);
+    switch (type) {
+      case "object":
+        if (token.type && token.text) {
+          switch (token.type) {
+            case "identifier":
+              break;
+            case "square braces":
+              strip = true;
+              break;
+            default:
+              throw "Invalid identifier";
+          }
+          token = token.text;
+        }
+        else {
+          throw "Invalid identifier";
+        }
+        break;
+      case "string":
+        if (this.isBraced(token)) {
+          strip = true;
+        }
+        break;
+      default:
+        throw "Invalid identifier";
+    }
+    if (strip){
+      token = token.substr(1, token.length - 2);
+    }
+    return token;
+  },
+  mergeDotExpressionMaps() {
+    var map = {}, arg, item, p, i, n = arguments.length;
+    for (i = 0; i < n; i++){
+      arg = arguments[i];
+      for (p in arg){
+        item = arg[p];
+        map[item.caption] = item.caption;
+      }
+    }
+    return map;
+  },
+  popupListForMap: function(map) {
+    var words = this.mapToWords(map);
+    if (words.length === 0) {
+      return;
+    }
+    this.sortWords(words);
+    this.populateList(words);
+    this.showList(true);
+  },
+  popupDimensionAndHierarchyDotExpressionList: function(restrictions, dimensionName){
+    try {
+      restrictions.DIMENSION_NAME = dimensionName;
+      var isDimension, isHierarchy, args = [];
+      pash.getDimensions(function(rowset) {
+
+        if (rowset.length !== 0){
+          args.push(this.dimensionDotExpressions);
+        }
+
+        delete restrictions.DIMENSION_NAME;
+        restrictions.HIERARCHY_NAME = dimensionName;
+        pash.getHierarchies(function(rowset) {
+          if (rowset.length !== 0){
+            args.push(this.hierarchyDotExpressions);
+          }
+          this.popupListForMap(this.mergeDotExpressionMaps.apply(this, args));
+        }, null, this, restrictions);
+      }, null, this, restrictions);
+    }
+    catch (exception){
+      //probably no catalog set.
+    }
+  },
+  popupHierarchyAndLevelDotExpressionList: function(restrictions, identifier1, identifier2){
+    try {
+      var args = [];
+      restrictions.DIMENSION_NAME = identifier1;
+      //check if identifier1 is a dimension
+      pash.getDimensions(function(dimensions) {
+        delete restrictions.DIMENSION_NAME;
+        var map = {};
+        //check if identifier2 is a hierarchy
+        restrictions.HIERARCHY_NAME = identifier2;
+        this.getHierarchiesForDimensions(map, dimensions, 0, restrictions, function(){
+          for (var p in map) {
+            //yes to both, popup hierarchy dot expressions
+            args.push(this.hierarchyDotExpressions);
+            break;
+          }
+
+          //check if identifier1 is a hierarchy
+          restrictions.HIERARCHY_NAME = identifier1;
+          pash.getHierarchies(function(hierarchies){
+            delete restrictions.HIERARCHY_NAME;
+            var map = {};
+            //check if identifier2 is a level
+            restrictions.LEVEL_NAME = identifier2;
+            this.getLevelsForHierarchies(map, hierarchies, 0, restrictions, function(){
+              for (var p in map) {
+                args.push(this.levelDotExpressions);
+                break;
+              }
+              map = this.mergeDotExpressionMaps.apply(this, args);
+              this.popupListForMap(map);
+            }, this);
+
+          }, null, this, restrictions);
+        }, this);
+      }, null, this, restrictions);
+    }
+    catch (exception) {
+    }
+  },
+  popupDimensionsAndHierarchiesList: function(restrictions){
+    try {
+      pash.getDimensions(function(rowset) {
+        var map = {};
+        this.rowsetToMap(rowset, "DIMENSION_NAME", map);
+        pash.getHierarchies(function(rowset) {
+          map = this.rowsetToMap(rowset, "HIERARCHY_NAME", map);
+          this.popupListForMap(map);
+        }, null, this, restrictions);
+      }, null, this, restrictions);
+    }
+    catch (exception){
+      //probably no catalog set.
+    }
+  },
+  getHierarchiesForDimensions: function(map, dimensions, index, restrictions, callback, scope){
+    if (index >= dimensions.length) {
+      callback.call(scope);
+      return;
+    }
+    var dimension = dimensions[index++];
+    restrictions.CUBE_NAME = dimension.CUBE_NAME;
+    restrictions.DIMENSION_UNIQUE_NAME = dimension.DIMENSION_UNIQUE_NAME;
+    pash.getHierarchies(function(hierarchies){
+      this.rowsetToMap(hierarchies, "HIERARCHY_NAME", map);
+      delete restrictions.CUBE_NAME;
+      delete restrictions.DIMENSION_UNIQUE_NAME;
+      this.getHierarchiesForDimensions(map, dimensions, index, restrictions, callback, scope);
+    }, null, this, restrictions);
+  },
+  getLevelsForHierarchies: function(map, hierarchies, index, restrictions, callback, scope){
+    if (index >= hierarchies.length) {
+      callback.call(scope);
+      return;
+    }
+    var hierarchy = hierarchies[index++];
+    restrictions.CUBE_NAME = hierarchy.CUBE_NAME;
+    restrictions.DIMENSION_UNIQUE_NAME = hierarchy.DIMENSION_UNIQUE_NAME;
+    restrictions.HIERARCHY_UNIQUE_NAME = hierarchy.HIERARCHY_UNIQUE_NAME;
+    pash.getLevels(function(levels){
+      this.rowsetToMap(levels, "LEVEL_NAME", map);
+      delete restrictions.CUBE_NAME;
+      delete restrictions.DIMENSION_UNIQUE_NAME;
+      delete restrictions.HIERARCHY_UNIQUE_NAME;
+      this.getLevelsForHierarchies(map, hierarchies, index, restrictions, callback, scope);
+    }, null, this, restrictions);
+  },
+  maxDimensionCardinality: 10,
+  maxLevelCardinality: 100,
+  getMembersForLowCardinalityDimensions: function(map, dimensions, index, restrictions, callback, scope){
+    var dimension;
+    while (true) {
+      if (index >= dimensions.length) {
+        callback.call(scope);
+        return;
+      }
+      dimension = dimensions[index++];
+      if (dimension.DIMENSION_CARDINALITY <= this.maxDimensionCardinality) {
+        break;
+      }
+    };
+    restrictions.CUBE_NAME = dimension.CUBE_NAME;
+    restrictions.DIMENSION_UNIQUE_NAME = dimension.DIMENSION_UNIQUE_NAME;
+    pash.getMembers(function(members){
+      this.rowsetToMap(members, "MEMBER_NAME", map);
+      delete restrictions.CUBE_NAME;
+      delete restrictions.DIMENSION_UNIQUE_NAME;
+      this.getMembersForLowCardinalityDimensions(map, dimensions, index, restrictions, callback, scope);
+    }, null, this, restrictions);
+  },
+  getMembersForLowCardinalityHierarchies: function(map, hierarchies, index, restrictions, callback, scope){
+    var hierarchy;
+    while (true) {
+      if (index >= hierarchies.length) {
+        callback.call(scope);
+        return;
+      }
+      hierarchy = hierarchies[index++];
+      if (hierarchy.HIERARCHY_CARDINALITY <= this.maxDimensionCardinality) {
+        break;
+      }
+    };
+    restrictions.CUBE_NAME = hierarchy.CUBE_NAME;
+    restrictions.DIMENSION_UNIQUE_NAME = hierarchy.DIMENSION_UNIQUE_NAME;
+    restrictions.HIERARCHY_UNIQUE_NAME = hierarchy.HIERARCHY_UNIQUE_NAME;
+    pash.getMembers(function(members){
+      this.rowsetToMap(members, "MEMBER_NAME", map);
+      delete restrictions.CUBE_NAME;
+      delete restrictions.DIMENSION_UNIQUE_NAME;
+      delete restrictions.HIERARCHY_UNIQUE_NAME;
+      this.getMembersForLowCardinalityHierarchies(map, hierarchies, index, restrictions, callback, scope);
+    }, null, this, restrictions);
+  },
+  popupHierarchiesAndLevelsList: function(restrictions, dimensionName){
+    try {
+      var map = {};
+      var dimensions = [];
+      var hierarchies = [];
+
+      //get all dimensions that could match our identifier
+      restrictions.DIMENSION_NAME = dimensionName;
+      pash.getDimensions(function(dimensions) {
+        delete restrictions.DIMENSION_NAME;
+        //get all hierarchies that could match our identifier
+        restrictions.HIERARCHY_NAME = dimensionName;
+        pash.getHierarchies(function(hierarchies) {
+          //colllect all hierarchies that belong to the dimensions we found
+          delete restrictions.HIERARCHY_NAME;
+          this.getHierarchiesForDimensions(map, dimensions, 0, restrictions, function(){
+            //colllect all levels that belong to the hierarchies we found
+            this.getLevelsForHierarchies(map, hierarchies, 0, restrictions, function(){
+              //collect all members that belong to the low cardinality dimensions we found
+              this.getMembersForLowCardinalityDimensions(map, dimensions, 0, restrictions, function(){
+                this.getMembersForLowCardinalityHierarchies(map, hierarchies, 0, restrictions, function(){
+                  this.popupListForMap(map);
+                }, this);
+              }, this);
+            }, this);
+          }, this);
+        }, null, this, restrictions);
+      }, null, this, restrictions);
+    }
+    catch (exception){
+      //probably no catalog set.
+    }
+  },
+  popupDotExpressionListDotExpressionList: function(token) {
+    if (token.type !== "identifier") {
+      return false;
+    }
+    var arg, args = [], text = token.text.toUpperCase();
+
+    var dimensionDotExpression = this.dimensionDotExpressions[text];
+    if (dimensionDotExpression) {
+      arg = this.getDotExpressionsMapForType(dimensionDotExpression.type);
+      if (arg) {
+        args.push(arg);
+      }
+    }
+    var hierarchyDotExpression = this.hierarchyDotExpressions[text];
+    if (hierarchyDotExpression) {
+      arg = this.getDotExpressionsMapForType(hierarchyDotExpression.type);
+      if (arg) {
+        args.push(arg);
+      }
+    }
+    var levelDotExpression = this.levelDotExpressions[text];
+    if (levelDotExpression) {
+      arg = this.getDotExpressionsMapForType(levelDotExpression.type);
+      if (arg) {
+        args.push(arg);
+      }
+    }
+    var memberDotExpression = this.memberDotExpressions[text];
+    if (memberDotExpression) {
+      arg = this.getDotExpressionsMapForType(memberDotExpression.type);
+      if (arg) {
+        args.push(arg);
+      }
+    }
+    var setDotExpression = this.setDotExpressions[text];
+    if (setDotExpression) {
+      arg = this.getDotExpressionsMapForType(setDotExpression.type);
+      if (arg) {
+        args.push(arg);
+      }
+    }
+
+    var ret;
+    if (args.length === 0) {
+      ret = false;
+    }
+    else {
+      var map = this.mergeDotExpressionMaps.apply(this, args);
+      this.popupListForMap(map);
+      ret = true;
+    }
+    return ret;
   },
   checkPopupList: function(source, event, data) {
     var showList = false, words, prefix, onCount = 0;
@@ -336,9 +858,12 @@ PashAutoComplete.prototype = {
         setClause = false,
         asClause = false,
         selectClause = false,
+        dimensionClause = false,
+        propertiesClause = false,
         onClause = false,
         fromClause = false,
-        whereClause = false
+        whereClause = false,
+        cellClause = false
     ;
     while (token = tokenizer.nextToken()) {
       switch (token.type) {
@@ -363,6 +888,12 @@ PashAutoComplete.prototype = {
             case "SELECT":
               selectClause = tokens.length;
               break;
+            case "DIMENSION":
+              dimensionClause = tokens.length;
+              break;
+            case "PROPERTIES":
+              propertiesClause = tokens.length;
+              break;
             case "ON":
               onClause = tokens.length;
               onCount++;
@@ -373,6 +904,8 @@ PashAutoComplete.prototype = {
             case "WHERE":
               whereClause = tokens.length;
               break;
+            case "CELL":
+              cellClause = tokens.length;
           }
           break;
         case "operator":
@@ -387,6 +920,16 @@ PashAutoComplete.prototype = {
       }
       tokens.push(token);
     }
+
+    var restrictions = {}, cubeName;
+    if (fromClause) {
+      if (fromClause + 1 < tokens.length) {
+        token = tokens[fromClause + 1];
+        cubeName = this.stripBraces(token);
+        restrictions.CUBE_NAME = cubeName;
+      }
+    }
+
     switch (ch) {
       case "[":
         if (tokens.length === 1 && tokens[0].text.toUpperCase() === "USE") {
@@ -395,6 +938,7 @@ PashAutoComplete.prototype = {
             prefix = word.word;
           }
           this.popupCatalogsList(prefix);
+          return;
         }
         else
         if (withClause !== false || selectClause !== false) {
@@ -403,77 +947,66 @@ PashAutoComplete.prototype = {
           if (fromClause) {
             if (whereClause === false && identifiers.length === 0) {
               try {
-                pash.getCubes(function(xmla, request, rowset){
+                pash.getCubes(function(cubes){
                   var words = this.rowsetToWords(rowset, "CUBE_NAME");
                   this.populateList(words);
-                  this.showList();
+                  this.showList(true);
                 }, null, this);
+                return;
               }
               catch (exception){
                 //probably no catalog set.
               }
               break;
-            }
-            var cubeName;
-            if (fromClause + 1 < tokens.length) {
-              token = tokens[fromClause + 1];
-              switch (token.type) {
-                case "identifier":
-                  cubeName = token.text;
-                  break;
-                case "square braces":
-                  cubeName = token.text.substr(1, token.text.length - 2);
-                  break;
-              }
             }
           }
-
           switch (identifiers.length) {
             case 0: //0 leading identifiers.
-              //next identifier should be either a hierarchy or a dimension,
-              //so populate the list with hierarchy and dimension identifiers (deduplicate).
-              try {
-                pash.getDimensions(function(xmla, request, rowset) {
-                  var map = this.rowsetToMap(rowset, "DIMENSION_NAME");
-                  pash.getHierarchies(function(xmla, request, rowset) {
-                    map = this.rowsetToMap(rowset, "HIERARCHY_NAME", map);
-                    var words = this.mapToWords(map);
-                    this.sortWords(words);
-                    this.populateList(words);
-                    this.showList();
-                  }, null, this, cubeName);
-                }, null, this, cubeName);
-              }
-              catch (exception){
-                //probably no catalog set.
-              }
-              break;
+              this.popupDimensionsAndHierarchiesList(restrictions);
+              return;
             case 1: //1 leading identifier.
-              //leading identifier might be a hierarchy or a dimension.
-              //check if we can find out which one it is.
-              //
-              //if we know for sure it is a dimension check its hierarchies:
-              //  - if there is one hierarchy and its name is identical to the dimension name
-              //    - add its levels to the list
-              //    - add its default member to the list, highlight it.
-              //  - if there is one hierarchy and its name is not identical to the dimension name, populate the list with that hierarchy and highlight it
-              //  - if there are multiple hierarchies  populate this list with hierarchies and highlight the DEFAULT_HIERARCHY
-              //
-              //if the DIMENSION_CARDINALITY is low, add members to the list
-              //if we add members, then see if the dimension is unique.
-              //  - if unique, use member names
-              //  - if not unique, use member keys (with & notation)
-              break;
+              var identifier1 = this.stripBraces(identifiers[0]);
+              this.popupHierarchiesAndLevelsList(restrictions, identifier1);
+              return;
             case 2: //2 leading identifiers
-              //identifier 1 might be a dimension or a hierarchy. figure out which on it is.
-              break;
+              //TODO:
+              //var identifier1 = this.stripBraces(identifiers[0]);
+              //var identifier2 = this.stripBraces(identifiers[1]);
+              //this.popupLevelsAndMembersList(restrictions, identifier1, identifier2);
+              //return;
+            default:
+              //TODO:
+              //this.popupMembersList(restrictions, identifier1, identifier2);
           }
         }
         break;
       case ".":
         var identifiers = this.getIdentifierChain(tokens);
-        if (identifiers.length === 1) {
-          words = this.dimensionDotExpressions;
+        switch (identifiers.length) {
+          case 0:
+            break;
+          case 1:
+            var dimensionName = this.stripBraces(identifiers[0]);
+            this.popupDimensionAndHierarchyDotExpressionList(restrictions, dimensionName);
+            return;
+          case 2:
+            if (this.popupDotExpressionListDotExpressionList(identifiers[identifiers.length -1])) {
+              return;
+            }
+            var identifier1 = this.stripBraces(identifiers[0]);
+            var identifier2 = this.stripBraces(identifiers[1]);
+            this.popupHierarchyAndLevelDotExpressionList(
+              restrictions,
+              identifier1,
+              identifier2
+            );
+            return;
+          case 3:
+
+          default:
+            if (this.popupDotExpressionListDotExpressionList(identifiers[identifiers.length -1])) {
+              return;
+            }
         }
         break;
       case " ":
@@ -497,17 +1030,22 @@ PashAutoComplete.prototype = {
           }
         }
         else
+        if (dimensionClause === tokens.length -1) {
+          words = ["PROPERTIES"];
+        }
+        else
         if (onClause && fromClause === false) {
           words = ["FROM"];
         }
         else
         if (fromClause === tokens.length - 1) {
           try {
-            pash.getCubes(function(xmla, request, rowset){
+            pash.getCubes(function(rowset){
               var words = this.rowsetToWords(rowset, "CUBE_NAME");
               this.populateList(words);
-              this.showList();
+              this.showList(true);
             }, null, this);
+            return;
           }
           catch (exception) {
             //probably no catalog set
@@ -516,7 +1054,14 @@ PashAutoComplete.prototype = {
         }
         else
         if (fromClause === tokens.length -2 && whereClause === false){
-          words = ["WHERE"];
+          words = ["CELL", "WHERE"];
+        }
+        else
+        if (cellClause === tokens.length - 1) {
+          words = ["PROPERTIES"];
+        }
+        else if (cellClause && propertiesClause === cellClause + 1) {
+          words = this.intrinsicCellProperties;
         }
         else {
           switch (tokens.length) {
@@ -561,6 +1106,12 @@ PashAutoComplete.prototype = {
               break;
           }
         }
+        break;
+      case ",":
+      case "{":
+      case "}":
+      case "(":
+      case ")":
         break;
       default:
         if ((tokens.length === 1 || tokens.length === 2) && (tokens[0].text.toUpperCase() === "USE")) {
@@ -609,7 +1160,10 @@ PashAutoComplete.prototype = {
   },
   filterList: function(prefix) {
     var matchPrefix = prefix.toUpperCase();
-    var listDom = this.listDom, items = listDom.childNodes, i, n = items.length, item, word, display, highlighted = false;
+    var listDom = this.listDom, items = listDom.childNodes, i, n = items.length,
+        item, word,
+        display, dislayed = 0, highlighted = false, firstDisplayedItem
+    ;
     var displayed = 0;
     for (i = 0; i < n; i++){
       item = items[i];
@@ -617,9 +1171,11 @@ PashAutoComplete.prototype = {
       if (word.toUpperCase().indexOf(matchPrefix) === 0) {
         display = "";
         displayed++;
-        if (!highlighted) {
-          item.className = "selected";
+        if (item.className === "selected") {
           highlighted = true;
+        }
+        if (!firstDisplayedItem) {
+          firstDisplayedItem = item;
         }
       }
       else {
@@ -627,6 +1183,9 @@ PashAutoComplete.prototype = {
         display = "none";
       }
       item.style.display = display;
+    }
+    if (firstDisplayedItem && !highlighted) {
+      firstDisplayedItem.className = "selected";
     }
     return displayed;
   },
