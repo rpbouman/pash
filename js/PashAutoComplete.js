@@ -595,9 +595,29 @@ PashAutoComplete.prototype = {
     if (words.length === 0) {
       return;
     }
+    this.popupListForArray(words);
+  },
+  popupListForArray: function(words) {
     this.sortWords(words);
     this.populateList(words);
     this.showList(true);
+  },
+  popupRestrictionColumnsList: function(showMethodName){
+    var pash = this.pash;
+    pash.getHelpTextForShowMethod(showMethodName, function(text){
+      var el = document.createElement("DIV");
+      el.innerHTML = text;
+      var table = el.firstChild;
+      var rows = table.rows, i, n = rows.length, row, cells, cols = [];
+      for (i = 1; i < n; i++) {
+        row = rows[i];
+        cells = row.cells;
+        if (cells[3].innerHTML === "Yes") {
+          cols.push(cells[0].innerHTML);
+        }
+      }
+      this.popupListForArray(cols);
+    }, this);
   },
   popupDimensionAndHierarchyDotExpressionList: function(restrictions, dimensionName){
     try {
@@ -1090,6 +1110,8 @@ PashAutoComplete.prototype = {
         }
         else {
           switch (tokens.length) {
+            case 0:
+              return;
             case 1:
               switch (tokens[0].text.toUpperCase()) {
                 case "HELP":
@@ -1135,11 +1157,83 @@ PashAutoComplete.prototype = {
                   break;
                 case "SHOW":
                   var showMethod = pash.getShowMethodName(token1);
-                  if (showMethod) {
-                    words = ["WHERE"];
+                  switch (showMethod) {
+                    case "showCurrentCatalog":
+                    case "discoverDBCatalogs":
+                      break;
+                    default:
+                      words = ["WHERE"];
                   }
               }
               break;
+            default:
+              if (tokens[0].text.toUpperCase() === "SHOW"){
+                var showMethod = pash.getShowMethodName(tokens[1]);
+                switch (showMethod) {
+                  case "showCurrentCatalog":
+                  case "discoverDBCatalogs":
+                    break;
+                  default:
+                    var i = 2, token;
+                    while (true) {
+                      token = tokens[i];
+                      if (i === 2) {
+                        if (token.text !== "WHERE") {
+                          //syntax error. nothing to show.
+                          return;
+                        }
+                      }
+                      else {
+                        if (token.text !== "AND") {
+                          //syntax error. nothing to show.
+                          return;
+                        }
+                      }
+
+                      i++;
+                      if (i >= tokens.length) {
+                        //popup a list with available restriction columns
+                        this.popupRestrictionColumnsList(showMethod);
+                        return;
+                      }
+
+                      token = tokens[i];
+                      //check if this token is a valid restriction column
+                      i++;
+                      if (i >= tokens.length) {
+                        //popup a list with only an = operator
+                        words = ["="];
+                        break;
+                      }
+
+                      token = tokens[i];
+                      if (token.text !== "=") {
+                        break;
+                      }
+                      i++;
+                      if (i >= tokens.length) {
+                        //popup a list with valid values for the column
+                        words = ["''"];
+                        break;
+                      }
+
+                      token = tokens[i];
+                      switch (token.type) {
+                        case "double quoted string":
+                        case "single quoted string":
+                          break;
+                        default:
+                          return;
+                      }
+
+                      i++;
+                      if (i >= tokens.length) {
+                        words = ["AND"];
+                        break;
+                      }
+                    }
+                }
+              }
           }
         }
         break;
