@@ -1099,7 +1099,13 @@ PashAutoComplete.prototype = {
                   words = this.mapToWords(pash.setPropertyMap);
                   break;
                 case "SHOW":
-                  words = this.mapToWords(pash.showKeywordMethodMap);
+                  try {
+                    pash.throwIfCatalogNotSet();
+                    words = this.mapToWords(pash.showKeywordMethodMap);
+                  }
+                  catch (e) {
+                    words = ["CATALOGS", "FUNCTIONS"];
+                  }
                   break;
                 case "USE":
                   this.popupCatalogsList();
@@ -1127,6 +1133,11 @@ PashAutoComplete.prototype = {
                     }
                   }
                   break;
+                case "SHOW":
+                  var showMethod = pash.getShowMethodName(token1);
+                  if (showMethod) {
+                    words = ["WHERE"];
+                  }
               }
               break;
           }
