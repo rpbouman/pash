@@ -362,7 +362,8 @@ PashAutoComplete.prototype = {
   },
   getWordAtPosition: function(position){
     var pash = this.pash;
-    var text = pash.replaceNbsp(pash.getLineTextString());
+    var text = pash.getLineTextString() || "";
+    text = pash.replaceNbsp(text);
     if (typeof(position) === "undefined") {
       position = pash.getCaretPosition() - 1;
     }
@@ -577,7 +578,7 @@ PashAutoComplete.prototype = {
     }
     return token;
   },
-  mergeDotExpressionMaps() {
+  mergeDotExpressionMaps: function() {
     var map = {}, arg, item, p, i, n = arguments.length;
     for (i = 0; i < n; i++){
       arg = arguments[i];
