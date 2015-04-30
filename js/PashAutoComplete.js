@@ -862,6 +862,7 @@ PashAutoComplete.prototype = {
         dimensionClause = false,
         propertiesClause = false,
         onClause = false,
+        axisComma = false,
         fromClause = false,
         whereClause = false,
         cellClause = false
@@ -896,6 +897,7 @@ PashAutoComplete.prototype = {
               propertiesClause = tokens.length;
               break;
             case "ON":
+              axisComma = false;
               onClause = tokens.length;
               onCount++;
               break;
@@ -912,8 +914,12 @@ PashAutoComplete.prototype = {
         case "operator":
           switch (token.text) {
             case ",":
-              if (onClause) {
+              if (onClause && axisComma === false) {
+                axisComma = tokens.length;
                 onClause = false;
+              }
+              else {
+                axisComma = false;
               }
               break;
           }
@@ -1012,6 +1018,13 @@ PashAutoComplete.prototype = {
         break;
       case " ":
       case nbsp:
+        if (
+          selectClause === tokens.length -1 ||
+          axisComma === tokens.length - 1
+        ) {
+          words = ["NON EMPTY"];
+        }
+        else
         if (withClause !== false && selectClause === false && memberClause === false && setClause === false) {
           words = ["MEMBER", "SET"];
         }
