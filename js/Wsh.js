@@ -126,10 +126,13 @@ var Wsh;
     textarea.className = Wsh.prefix + "-textarea";
     textarea.id = me.getTextAreaId();
     textarea.onkeydown = function(e) {
-      if (!e) e = win.event;
+      var textarea = me.getTextArea();
+      if (!e) {
+        e = win.event;
+      }
       win.setTimeout(function(){
         me.keyDownHandler(e);
-      }, 1)
+      }, 0);
     }
     dom.appendChild(textarea);
 
@@ -154,10 +157,13 @@ var Wsh;
   getLineBreak: function(interval) {
     return this.conf.lineBreak || Wsh.defaultConfig.lineBreak;
   },
+  replaceNbsp: function(text) {
+    return text.replace(/\xA0/g, " ");
+  },
   updateText: function(){
     var textarea = this.getTextArea();
     var text = textarea.value;
-    text = text.replace(/\xA0/g, " ");
+    text = this.replaceNbsp(text);
     var lineBreak = this.conf.lineBreak;
     var line;
     if (lineBreak.test(text)) {
@@ -174,7 +180,7 @@ var Wsh;
           this.createLine();
         }
       }
-      textarea.value = line;
+      this.setTextAreaText(line);
       this.updateCaretPosition();
     }
     else {
@@ -194,7 +200,7 @@ var Wsh;
     }
     else {
       if (typeof(this.oldValue) === "string") {
-        textarea.value = this.oldValue;
+        this.setTextAreaText(this.oldValue);
       }
       textarea.disabled = false;
       textarea.focus();
@@ -202,14 +208,31 @@ var Wsh;
     }
   },
   keyDownHandler: function(e) {
-    if (this.inputBlocked) return;
-    this.fireEvent("keydown", e);
+    if (this.inputBlocked) {
+      return;
+    }
+    if (this.fireEvent("keydown", e) === false) {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      else {
+        e.returnValue = false;
+      }
+      return;
+    }
     var textarea = this.getTextArea();
     var text = textarea.value;
     var lineBreak = this.conf.lineBreak;
     var line = this.getCurrentLine();
     var keyCode = e.keyCode;
     switch (keyCode) {
+      case 16:  //shift
+      case 33:  //page up
+      case 34:  //page down
+      case 38:  //arrow up
+      case 40:  //arrow down
+        this.restoreCaretPosition();
+        return;
       case 13:
         var string = text.replace(lineBreak, "");
         this.setLineText(string, line);
@@ -239,7 +262,9 @@ var Wsh;
     else
     if (doc.selection) {
       var r = doc.selection.createRange();
-      if (r == null) return 0;
+      if (r == null) {
+        return 0;
+      }
       var re = el.createTextRange(), rc = re.duplicate();
       re.moveToBookmark(r.getBookmark());
       rc.setEndPoint('EndToStart', re);
@@ -247,11 +272,32 @@ var Wsh;
     }
     return 0;
   },
+  restoreCaretPosition: function(){
+    this.setCaretPosition(this.prevCaretPosition);
+  },
+  setCaretPosition: function(position){
+    var el = this.getTextArea();
+    if (el.setSelectionRange) {
+      el.setSelectionRange(position, position);
+    }
+    else
+    if (el.createTextRange) {
+      var range = el.createTextRange();
+      range.collapse(true);
+      range.moveStart("character", position);
+      range.moveEnd("character", position);
+      range.select();
+    }
+    this.updateCaretPosition();
+  },
   getDom: function() {
     return gEl(this.getId());
   },
   getTextArea: function() {
     return gEl(this.getTextAreaId());
+  },
+  setTextAreaText: function(text){
+    this.getTextArea().value = text;
   },
   getTextAreaText: function() {
     return this.getTextArea().value;
@@ -300,7 +346,7 @@ var Wsh;
     var dom = this.getDom();
     dom.appendChild(line);
 
-    this.getTextArea().value = "";
+    this.setTextAreaText("");
     this.fireEvent("afterCreateLine", {
       id: id,
       dom: line
@@ -326,7 +372,9 @@ var Wsh;
     return lines[index];
   },
   getCurrentLine: function() {
-    if (this.currentLine) return this.currentLine;
+    if (this.currentLine) {
+      return this.currentLine;
+    }
     var lines = this.getLines();
     return lines[lines.length - 1];
   },
@@ -344,7 +392,9 @@ var Wsh;
     prompt.innerHTML = string;
   },
   getLineText: function(line) {
-    if (!line) line = this.getCurrentLine();
+    if (!line) {
+      line = this.getCurrentLine();
+    }
     var spans = line.getElementsByTagName("SPAN");
     return spans[1];
   },
@@ -353,7 +403,9 @@ var Wsh;
     return text.textContent || text.innerText;
   },
   setLineText: function(string, line) {
-    if (!line) line = this.getCurrentLine();
+    if (!line) {
+      line = this.getCurrentLine();
+    }
     this.lineContent = this.escapeHTML(string);
     this.fireEvent("beforeSetLineText", {
       dom: line,
@@ -369,17 +421,18 @@ var Wsh;
   },
   updateCaretPosition: function() {
     var caretPosition = this.getCaretPosition();
+    this.prevCaretPosition = caretPosition;
     var prompt = this.getLinePrompt();
     var caret = this.getCaret();
     var line = this.getCurrentLine();
     var text = line.getElementsByTagName("SPAN")[1];
-    var string = text.textContent || text.innerText;
-    var head = string.substr(0, caretPosition);
-    var tail = string.substr(caretPosition);
+    var str = text.textContent || text.innerText || "";
+    var head = str.substr(0, caretPosition);
+    var tail = str.substr(caretPosition);
     text.innerHTML = this.escapeHTML(head);
     caret.style.left = text.offsetLeft + text.offsetWidth + "px";
     caret.style.top = "0px";
-    text.innerHTML = this.escapeHTML(string);
+    text.innerHTML = this.escapeHTML(str);
 
     var textArea = this.getTextArea();
     var style = textArea.style;
@@ -407,6 +460,7 @@ WshHistory = function(wsh){
   wsh.addListener("keydown", this.keyDown, this);
   this.index = 0;
 };
+
 WshHistory.prototype = {
   keyDown: function(wsh, name, event){
     var keyCode = event.keyCode;
@@ -427,7 +481,7 @@ WshHistory.prototype = {
         return;
     }
     var lines = wsh.getLines(), line, text, texts = {};
-    while (this.index > i++) {
+    while (this.index > i) {
       while (true) {
         ++l;
         idx = lines.length - l;
@@ -449,12 +503,14 @@ WshHistory.prototype = {
         texts[text] = true;
         break;
       };
+      i++;
     }
     if (!line) {
       this.index = oldIndex;
     }
     text = wsh.getLineTextString(line);
-    wsh.getTextArea().value = text;
+    wsh.setTextAreaText(text);
+    wsh.updateText();
   }
 };
 

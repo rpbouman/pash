@@ -1,5 +1,9 @@
 html, body {
-  overlow: hidden;
+  overflow: hidden;
+  font-size: 12pt;
+  font-family: monospace;
+  background-color: white;
+  color: black;
 }
 
 .wsh {
@@ -11,11 +15,7 @@ html, body {
   bottom: 0px;
   left: 0px;
   right: 0px;
-  font-size: 12pt;
-  font-family: monospace;
   white-space: pre;
-  background-color: white;
-  color: black;
   margin-right: 1em;
 }
 
