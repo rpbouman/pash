@@ -940,61 +940,71 @@ xmlashPrototype = {
   tutorialLine: "<a class=\"link\" target=\"_blank\" href=\"https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell\">" +
                 "https://github.com/rpbouman/pash/wiki/Pash---The-Pentaho-Analysis-Shell" +
                 "</a>",
-  showHelpForShowMethod: function(methodName){
+  extractTextForShowMethod: function(methodName) {
+    var text = this.xmlaSourceText;
+    var indexOfMethodDoc = text.indexOf("@method " + methodName);
+    if (indexOfMethodDoc === -1) {
+      throw "No method " + methodName + " found.";
+    }
+    text = text.substr(0, indexOfMethodDoc);
+    var indexOfDoc = text.lastIndexOf("/**");
+    if (indexOfDoc === -1) {
+      throw "Start of documentation for method " + methodName + " not found.";
+    }
+    text = text.substr(indexOfDoc);
+    text = text.replace(/\n\*\s*/g, "");
+
+    var indexOfTable;
+    indexOfTable = text.indexOf("</table>");
+    if (indexOfTable === -1) {
+      throw "No column table found";
+    }
+    text = text.substr(0, indexOfTable + "</table>".length);
+    indexOfTable = text.indexOf("<table");
+    if (indexOfTable === -1) {
+      throw "No column table found";
+    }
+    text = text.substr(indexOfTable);
+    return text;
+  },
+  getXmlaSourceText: function(callback, scope) {
     var me = this;
-    var showHelpForShowMethod = function(append){
-      var text = this.xmlaSourceText;
-      var indexOfMethodDoc = text.indexOf("@method " + methodName);
-      if (indexOfMethodDoc === -1) {
-        throw "No method " + methodName + " found.";
+    var location = document.location;
+    var origin = location.protocol + "//" + location.host;
+    var url = origin + location.pathname.replace(/html\/index.html/, "js/Xmla.js");
+    var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function(){
+      switch (this.readyState) {
+        case 0:
+          //options.aborted(options, this);
+          break;
+        case 4:
+          if (xhr.status === 200){
+            callback.call(scope, xhr.responseText);
+          }
+          break;
+        default:
       }
-      text = text.substr(0, indexOfMethodDoc);
-      var indexOfDoc = text.lastIndexOf("/**");
-      if (indexOfDoc === -1) {
-        throw "Start of documentation for method " + methodName + " not found.";
-      }
-      text = text.substr(indexOfDoc);
-      text = text.replace(/\n\*\s*/g, "");
-
-      var indexOfTable;
-      indexOfTable = text.indexOf("</table>");
-      if (indexOfTable === -1) {
-        throw "No column table found";
-      }
-      text = text.substr(0, indexOfTable + "</table>".length);
-      indexOfTable = text.indexOf("<table");
-      if (indexOfTable === -1) {
-        throw "No column table found";
-      }
-      text = text.substr(indexOfTable);
-      me.writeResult(text, append);
     };
-
+    xhr.send(null);
+  },
+  getHelpTextForShowMethod: function(methodName, callback, scope){
     if (this.xmlaSourceText) {
-      showHelpForShowMethod.call(me, true);
+      var helpText = this.extractTextForShowMethod(methodName);
+      callback.call(scope, helpText);
     }
     else {
-      var location = document.location;
-      var origin = location.protocol + "//" + location.host;
-      var url = origin + location.pathname.replace(/html\/index.html/, "js/Xmla.js");
-      var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
-      xhr.open("GET", url, true);
-      xhr.onreadystatechange = function(){
-        switch (this.readyState) {
-          case 0:
-            options.aborted(options, this);
-            break;
-          case 4:
-            if (xhr.status === 200){
-              me.xmlaSourceText = xhr.responseText;
-              showHelpForShowMethod.call(me, false);
-            }
-            break;
-          default:
-        }
-      };
-      xhr.send(null);
+      this.getXmlaSourceText(function(xmlaSourceText){
+        this.xmlaSourceText = xmlaSourceText;
+        this.getHelpTextForShowMethod(methodName, callback, scope);
+      }, this);
     }
+  },
+  showHelpForShowMethod: function(methodName) {
+    this.getHelpTextForShowMethod(methodName, function(helpText){
+      this.writeResult(helpText, false);
+    }, this);
   },
   handleHelp: function(){
     var me = this, tokenizer = me.tokenizer, token, text, message = "";
@@ -1302,7 +1312,18 @@ xmlashPrototype = {
       }
     }
     catch (e) {
-      me.error(typeof(e) === "string" ? e : e.getMessage(), true);
+      var errorText;
+      if (typeof(e) === "string") {
+        errorText = e;
+      }
+      else
+      if (typeof(e.getMessage) === "function") {
+        errorText = e.getMessage();
+      }
+      else {
+        errorText = e.toString();
+      }
+      me.error(errorText, true);
     }
   },
   writeResult: function(result, append){
