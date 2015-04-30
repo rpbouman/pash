@@ -26,7 +26,6 @@ var Xmlash = function(conf){
     {
       events: Xmla.EVENT_REQUEST,
       handler: function(){
-        this.getTextArea().value = "";
         this.blockInput(true);
       },
       scope: this
@@ -48,10 +47,10 @@ var Xmlash = function(conf){
           request.method === Xmla.METHOD_DISCOVER &&
           request.requestType === Xmla.DISCOVER_DATASOURCES
         ) {
-          console.log("Error discovering datasource: " + code + ": " + desc);
+          console.log("Error discovering datasource: " + escXml(code) + ": " + escXml(desc));
         }
         else {
-          this.error(escXml(desc) + " (" + escXml(code) + ")");
+          this.error(desc + " (" + code + ")");
           try { //try to extract code and desc, these are passed by mondrian and often contain the actual information.
             var xml = request.xhr.responseXML;
             var code = xml.getElementsByTagName("code")[0].firstChild.data;
@@ -70,18 +69,27 @@ var Xmlash = function(conf){
   this.lines = [
     "MDX shell version " + this.version + " powered by Xmla4js.",
     "Copyright 2014, 2015 Roland Bouman.",
-    "This program is open source.",
+    "This program is open source."
   ];
   this.addListener("leaveLine", this.leaveLineHandler, this);
-  this.history = new exports.WshHistory(this);
   this.render();
   this.initDatasources();
+  this.schemaCache = {};
 };
 
 xmlashPrototype = {
-  version: "0.14 / MONDRIAN-2263",
+  commandList: [
+    "HELP",
+    "SHOW",
+    "SET",
+    "USE"
+  ],
+  version: "0.14 - MONDRIAN-2263",
   defaultPrompt: "MDX> ",
   memberPropertyToRender: "Caption",
+  getTokenizer: function() {
+    return this.tokenizer;
+  },
   getContinuationPrompt: function() {
     var prompt = String(this.lineNumber) + " ";
     var defaultPrompt = this.defaultPrompt;
@@ -99,7 +107,9 @@ xmlashPrototype = {
     ;
     tokenizer.tokenize(text);
     while (token = tokenizer.nextToken()) {
-      if (terminator) afterTerminator = true;
+      if (terminator) {
+        afterTerminator = true;
+      }
       if (token.type === "terminator") {
         terminator = true;
       }
@@ -128,12 +138,16 @@ xmlashPrototype = {
     return this.statementLines.join("\n");
   },
   handleCommand: function(){
+    this.blockInput(true);
     var statement = this.getEnteredStatementText();
     statement = statement.substr(0, statement.lastIndexOf(";"));
     var tree = this.parse(statement);
     this.tokenizer.reset();
+    this.setTextAreaText("");
+    this.oldValue = "";
     this.statementLines.length = 0;
     this.fireEvent("commandHandled");
+    this.blockInput(false);
   },
   showExpectedError: function(expected, found, append){
     if (append !== false) {
@@ -174,6 +188,7 @@ xmlashPrototype = {
         this.showCurrentCatalog();
         this.prompt = this.defaultPrompt;
         i++;
+        this.schemaCache = {};
       }, me);
       if (i !== 1) {
         var msg;
@@ -191,8 +206,8 @@ xmlashPrototype = {
       delete request.properties.Catalog;
       delete request.restrictions.CATALOG_NAME;
       var c1 = token.text.toUpperCase();
-      me.xmla.discoverDBCatalogs({
-        success: function(xmla, request, rowset){
+      me.getCatalogs(
+        function(xmla, request, rowset){
           var message = "", num = 0;
           rowset.eachRow(function(row){
             var c2 = row.CATALOG_NAME.toUpperCase();
@@ -213,13 +228,273 @@ xmlashPrototype = {
           }
           request.properties.Catalog = oldCatalog;
         },
-        error: function(){
-          request.properties.Catalog = oldCatalog;
-        }
-      });
-      request.properties.Catalog = oldCatalog;
+        null,
+        me
+      );
     }
     me.xmla.discoverDBCatalogs(request);
+  },
+  throwIfCatalogNotSet: function(){
+    var catalog = this.getCurrentCatalog();
+    if (!catalog) {
+      throw {
+        message: "Catalog not set"
+      };
+    }
+  },
+  testFilter: function(row, restrictions){
+    var column, field, value;
+    for (column in restrictions) {
+      field = row[column];
+      if (typeof(field) === "undefined") {
+        throw "No such field " + column;
+      }
+      if (restrictions[column] !== field) {
+        return false;
+      }
+    }
+    return true;
+  },
+  filter: function(rowset, restrictions){
+    if (!restrictions) {
+      return rowset;
+    }
+    var filteredRowset = [], i, row, n = rowset.length;
+    for (i = 0; i < n; i++) {
+      row = rowset[i];
+      if (this.testFilter(row, restrictions)){
+        filteredRowset.push(row);
+      }
+    }
+    return filteredRowset;
+  },
+  getCubes: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var cubes = this.schemaCache.cubes;
+    if (cubes) {
+      cubes = this.filter(cubes, filter)
+      success.call(scope, cubes);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      var request = {
+        restrictions: {
+          CATALOG_NAME: catalog
+        },
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        me.schemaCache.cubes = rowset.fetchAllAsObject();
+        if (success) {
+          me.getCubes(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDCubes(request);
+    }
+  },
+  getDimensions: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var dimensions = this.schemaCache.dimensions;
+    if (dimensions) {
+      dimensions = this.filter(dimensions, filter);
+      success.call(scope, dimensions);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      var request = {
+        restrictions: {
+          CATALOG_NAME: catalog
+        },
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        var dimensions = [];
+        rowset.eachRow(function(dimension){
+          //only store dimensions that belong to a cube.
+          if (
+            dimension.CUBE_NAME &&
+            dimension.DIMENSION_IS_VISIBLE === true
+          ) {
+            dimensions.push(dimension);
+          }
+        });
+        me.schemaCache.dimensions = dimensions;
+        if (success) {
+          me.getDimensions(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDDimensions(request);
+    }
+  },
+  getHierarchies: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var hierarchies = this.schemaCache.hierarchies;
+    if (hierarchies) {
+      hierarchies = this.filter(hierarchies, filter);
+      success.call(scope, hierarchies);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      var request = {
+        restrictions: {
+          CATALOG_NAME: catalog
+        },
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        var hierarchies = [];
+        rowset.eachRow(function(hierarchy){
+          if (
+            hierarchy.CUBE_NAME &&
+            hierarchy.DIMENSION_IS_VISIBLE === true &&
+            hierarchy.HIERARCHY_IS_VISIBLE === true
+          ) {
+            hierarchies.push(hierarchy);
+          }
+        });
+        me.schemaCache.hierarchies = hierarchies;
+        if (success) {
+          me.getHierarchies(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDHierarchies(request);
+    }
+  },
+  getLevels: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var levels = this.schemaCache.levels;
+    if (levels) {
+      levels = this.filter(levels, filter);
+      success.call(scope, levels);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      var request = {
+        restrictions: {
+          CATALOG_NAME: catalog
+        },
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        var levels = [];
+        rowset.eachRow(function(level){
+          if (
+            level.CUBE_NAME &&
+            level.LEVEL_IS_VISIBLE === true
+          ) {
+            levels.push(level);
+          }
+        });
+        me.schemaCache.levels = levels;
+        if (success) {
+          me.getLevels(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDLevels(request);
+    }
+  },
+  getMembers: function(success, error, scope, filter) {
+    this.throwIfCatalogNotSet();
+    var schemaCache = this.schemaCache;
+    var _members, members = this.schemaCache.members;
+    if (!members) {
+      schemaCache.members = members = {};
+    }
+    var key = "", filterProp, filterValue, restrictions = {};
+    for (filterProp in filter) {
+      if (key !== "") {
+        key += ";"
+      }
+      filterValue = filter[filterProp];
+      key += filterProp + "=" + filterValue;
+      restrictions[filterProp] = filterValue;
+    }
+    _members = members[key];
+    if (_members) {
+      success.call(scope, _members);
+    }
+    else {
+      var catalog = this.getCurrentCatalog();
+      restrictions.CATALOG_NAME = catalog;
+      var request = {
+        restrictions: restrictions,
+        properties: {
+          Catalog: catalog
+        }
+      };
+      var me = this;
+      request.success = function(xmla, request, rowset) {
+        var members = [];
+        rowset.eachRow(function(member){
+          if (member.CUBE_NAME) {
+            members.push(member);
+          }
+        });
+        me.schemaCache.members[key] = members;
+        if (success) {
+          me.getMembers(success, error, scope, filter);
+        }
+      };
+      request.error = function(xmla, request, rowset) {
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      };
+      this.xmla.discoverMDMembers(request);
+    }
+  },
+  getCatalogs: function(success, error, scope){
+    var oldCatalog = this.getCurrentCatalog();
+
+    var request = this.xmlaRequest;
+    delete request.properties.Catalog;
+    delete request.restrictions.CATALOG_NAME;
+
+    request.success = function(xmla, request, rowset){
+      if (success) {
+        success.call(scope, xmla, request, rowset);
+      }
+      request.properties.Catalog = oldCatalog;
+    };
+    request.error = function(xmla, request, exception){
+      if (error) {
+        error.call(scope, xmla, request, exception);
+      }
+      request.properties.Catalog = oldCatalog;
+    };
+    this.xmla.discoverDBCatalogs(request);
   },
   renderRowset: function(rowset, fieldNames) {
     try {
@@ -357,11 +632,13 @@ xmlashPrototype = {
   },
   setPropertyMap: {
     PROMPT: {
+      helpText: "Set the text that is to be used as prompt.",
       property: "defaultPrompt",
       expected: ["single quoted string", "double quoted string", "identifier"],
       setter: "setPrompt"
     },
     MEMBER_PROPERTY: {
+      helpText: "Set the member property that will be used in the headings of MDX dataset output.",
       property: "memberPropertyToRender",
       expected: ["single quoted string", "double quoted string", "identifier"],
       values: {
@@ -374,8 +651,25 @@ xmlashPrototype = {
     if (keyword.type && keyword.text) {
       keyword = keyword.text;
     }
-    keyword = keyword.toUpperCase();
-    return this.setPropertyMap[keyword];
+    return this.setPropertyMap[keyword.toUpperCase()];
+  },
+  getSetPropertyValueList: function(keyword){
+    var prop;
+    switch (typeof(keyword)){
+      case "string":
+        prop = this.getSetProperty(keyword);
+        break;
+      case "object":
+        prop = keyword;
+        break;
+      default:
+        throw "Not a valid property";
+    }
+    var value, list = [];
+    for (value in prop.values) {
+      list.push(value);
+    }
+    return list.join(", ");
   },
   getSetPropertyList: function(){
     if (!this.setPropertyList) {
@@ -512,7 +806,8 @@ xmlashPrototype = {
     if (keyword.type && keyword.text) {
       keyword = keyword.text;
     }
-    return this.showKeywordMethodMap[keyword.toUpperCase()];
+    keyword = keyword.toUpperCase();
+    return this.showKeywordMethodMap[keyword];
   },
   getShowKeywordList: function(){
     if (!this.showKeywordList) {
@@ -562,7 +857,7 @@ xmlashPrototype = {
     }
     var request = this.xmlaRequest;
     var catalog = this.getCurrentCatalog();
-    if (catalog) {
+    if (catalog && funcName !== "discoverDBCatalogs" && funcName !== "discoverMDFunctions") {
       restrictions.CATALOG_NAME = catalog;
     }
     else {
@@ -578,7 +873,7 @@ xmlashPrototype = {
           delete request.callback;
         }
         delete request.properties.Catalog;
-        if (funcName === "discoverDBCatalogs") {
+        if (funcName === "discoverDBCatalogs"){
           request.restrictions = {};
         }
         break;
@@ -588,7 +883,6 @@ xmlashPrototype = {
         }
         break;
     }
-
     request.success = function(xmla, request, rowset) {
       request.restrictions = {};
       me.renderRowset(rowset);
@@ -681,7 +975,8 @@ xmlashPrototype = {
     }
     else {
       var location = document.location;
-      var url = location.origin + location.pathname.replace(/html\/index.html/, "js/Xmla.js");
+      var origin = location.protocol + "//" + location.host;
+      var url = origin + location.pathname.replace(/html\/index.html/, "js/Xmla.js");
       var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
       xhr.open("GET", url, true);
       xhr.onreadystatechange = function(){
@@ -712,17 +1007,37 @@ xmlashPrototype = {
       text = token.text.toUpperCase();
       switch (text) {
         case "HELP":
-          message += "<br/>Type HELP &lt;commmand&gt; to get help about a specific shell command." +
+          message += "Type HELP &lt;commmand&gt; to get help about a specific shell command." +
                      "<br/>Valid values for &lt;commmand&gt; are HELP, SHOW, and USE." +
                      "<br/>Check out the tutorial:" +
                      "<br/>" + this.tutorialLine
           ;
           break;
         case "SET":
-          message +=  "<br/>Type SET &lt;property&gt; &lt;value&gt; to change the value of a Pash property." +
-                      "<br/>Properties control how Pash behaves." +
-                      "<br/>Valid properties are " + this.getSetPropertyList() + "."
-          ;
+          if (tokenizer.hasMoreTokens()) {
+            token = tokenizer.nextToken();
+            var prop = this.getSetProperty(token.text);
+            if (prop) {
+              if (prop.helpText) {
+                message += prop.helpText;
+              }
+              else {
+                message +=  "Set the " + token.text.toUpperCase() + " property.";
+              }
+              if (prop.values) {
+                message += "<br/>Valid values are: " + this.getSetPropertyValueList(prop);
+              }
+            }
+            else {
+              message +=  "<br/>No such property: " + token.text.toUpperCase();
+            }
+          }
+          else {
+            message +=  "Type SET &lt;property&gt; &lt;value&gt; to change the value of a Pash property." +
+                        "<br/>Properties control how Pash behaves." +
+                        "<br/>Valid properties are " + this.getSetPropertyList() + "."
+            ;
+          }
           break;
         case "SHOW":
           if (tokenizer.hasMoreTokens()) {
@@ -746,7 +1061,7 @@ xmlashPrototype = {
             return;
           }
           else {
-            message +=  "<br/>Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
+            message +=  "Type SHOW &lt;item&gt; to get information about a particular kind of item (metadata)." +
                         "<br/>Valid values for &lt;item&gt; are " + this.getShowKeywordList() + "." +
                         "<br/>"+
                         "<br/>SHOW CATALOGS always lists all available catalogs; SHOW CATALOG shows the current catalog." +
@@ -766,7 +1081,7 @@ xmlashPrototype = {
           }
           break;
         case "USE":
-          message += "<br/>Type USE &lt;catalog&gt; to select a particular catalog to work with." +
+          message += "Type USE &lt;catalog&gt; to select a particular catalog to work with." +
                      "<br/>You can always use the SHOW CATALOGS command to list all available catalogs." +
                      "<br/>After selecting a specific catalog, you can use the other SHOW command, and execute MDX queries."
           ;
@@ -853,7 +1168,15 @@ xmlashPrototype = {
               else {
                   value = "";
               }
-              td += "<td>" + value + "</td>";
+              var className = typeof(value);
+              if (className === "string") {
+                className = " class=\"" + className + "\"";
+                value = escXml(value);
+              }
+              else {
+                className = "";
+              }
+              td += "<td" + className + ">" + value + "</td>";
           });
           return td;
       }
@@ -1021,7 +1344,8 @@ xmlashPrototype = {
           }
         }
         if (!urls.length) {
-          var base = location.origin + "/";
+          var origin = location.protocol + "//" + location.host;
+          var base = origin + "/";
           //mondrian, f.e. http://localhost:8080/mondrian/xmla
           urls.push(base + "mondrian/xmla");
           //jasperreports, f.e. http://localhost:8080/jasperserver/xmla
@@ -1054,11 +1378,9 @@ xmlashPrototype = {
                 "<br/>URL: " + row.URL +
                 "<br/>Provider: " + row.ProviderName + ", type: " + row.ProviderType +
                 "<br/>Authentication mode: " + row.AuthenticationMode +
-                "<br/>"+
-                "<br/>Using \"" + row.DataSourceName + "\" instead of \"" + row.DataSourceInfo + "\" as DataSourceInfo in subsequent requests."+
-                "<br/>"+
+                "<br/>" +
                 "<br/>Warning: this version of Pash uses a workaround for Pentaho 5.3/MONDRIAN-2263." +
-                "<br/>If you're experiencing problems, check your BI Server version, or up- or downgrade Pash.",
+                "<br/>If you're experiencing problems, check your BI Server version, or up- or downgrade Pash",
                 ""
               );
               me.xmlaRequest.properties.DataSourceInfo = row.DataSourceName;
@@ -1076,8 +1398,10 @@ xmlashPrototype = {
             var exception = request.exception;
             if (exception.code === -10) {
               var data = exception.data;
-              if (data.status === 404) {
-                me.initDatasources(urls, ++index);
+              switch (data.status) {
+                default:
+                  me.initDatasources(urls, ++index);
+                  break;
               }
             }
             else

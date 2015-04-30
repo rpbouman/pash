@@ -5,13 +5,15 @@ div.pash-autocomplete-list {
   height: 7em;
   border-style: solid;
   border-width: 1px;
-  border-color: whitesmoke;
+  border-color: black;
   z-index: 1;
   background-color: white;
   padding-right: 1em;
+  display: none;
+  white-space: nowrap;
 }
 
-div.pash-autocomplete-list > div.selected {
+div.pash-autocomplete-list > div.selected > span {
   color: white;
   background-color: lightblue;
 }
