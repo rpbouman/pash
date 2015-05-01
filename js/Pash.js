@@ -257,7 +257,9 @@ xmlashPrototype = {
   },
   filter: function(rowset, restrictions){
     if (!restrictions) {
-      return rowset;
+      //return a copy, the original array is our cache.
+      //can't allow the caller writing to that.
+      return [].concat(rowset);
     }
     var filteredRowset = [], i, row, n = rowset.length;
     for (i = 0; i < n; i++) {
