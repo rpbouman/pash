@@ -350,14 +350,16 @@ PashAutoComplete.prototype = {
     if (this.isListShown()) {
       ret = false;
       switch (keyCode) {
-        case 8:
-          this.hideList();
+        case 8:   //backspace
           ret = true;
+        case 27:  //escape
+        case 37:  //arrow left
+          this.hideList();
           break;
           //tab, return, space and arrow right select and insert the selection.
         case 9:
         case 13:
-        case 39:
+        case 39:  //arrow right
           this.enterSelectedWord();
           break;
         case 33:  //page up
@@ -725,6 +727,12 @@ PashAutoComplete.prototype = {
       //probably no catalog set.
     }
   },
+  copyArrayTo: function(source, target){
+    var i, n = source.length;
+    for (i = 0; i < n; i++) {
+      target.push(source[i]);
+    }
+  },
   getHierarchiesForDimensions: function(map, dimensions, index, restrictions, callback, scope){
     if (index >= dimensions.length) {
       callback.call(scope);
@@ -734,7 +742,12 @@ PashAutoComplete.prototype = {
     restrictions.CUBE_NAME = dimension.CUBE_NAME;
     restrictions.DIMENSION_UNIQUE_NAME = dimension.DIMENSION_UNIQUE_NAME;
     pash.getHierarchies(function(hierarchies){
-      this.rowsetToMap(hierarchies, "HIERARCHY_NAME", map);
+      if (map instanceof Array) {
+        this.copyArrayTo(hierarchies, map);
+      }
+      else {
+        this.rowsetToMap(hierarchies, "HIERARCHY_NAME", map);
+      }
       delete restrictions.CUBE_NAME;
       delete restrictions.DIMENSION_UNIQUE_NAME;
       this.getHierarchiesForDimensions(map, dimensions, index, restrictions, callback, scope);
@@ -750,7 +763,12 @@ PashAutoComplete.prototype = {
     restrictions.DIMENSION_UNIQUE_NAME = hierarchy.DIMENSION_UNIQUE_NAME;
     restrictions.HIERARCHY_UNIQUE_NAME = hierarchy.HIERARCHY_UNIQUE_NAME;
     pash.getLevels(function(levels){
-      this.rowsetToMap(levels, "LEVEL_NAME", map);
+      if (map instanceof Array) {
+        this.copyArrayTo(levels, map);
+      }
+      else {
+        this.rowsetToMap(levels, "LEVEL_NAME", map);
+      }
       delete restrictions.CUBE_NAME;
       delete restrictions.DIMENSION_UNIQUE_NAME;
       delete restrictions.HIERARCHY_UNIQUE_NAME;
@@ -758,7 +776,6 @@ PashAutoComplete.prototype = {
     }, null, this, restrictions);
   },
   maxDimensionCardinality: 10,
-  maxLevelCardinality: 100,
   getMembersForLowCardinalityDimensions: function(map, dimensions, index, restrictions, callback, scope){
     var dimension;
     while (true) {
@@ -803,6 +820,30 @@ PashAutoComplete.prototype = {
       this.getMembersForLowCardinalityHierarchies(map, hierarchies, index, restrictions, callback, scope);
     }, null, this, restrictions);
   },
+  getMembersForLevels: function(map, levels, index, restrictions, callback, scope) {
+    if (index >= levels.length) {
+      callback.call(scope);
+      return;
+    }
+    var level = levels[index++];
+    restrictions.CUBE_NAME = level.CUBE_NAME;
+    restrictions.DIMENSION_UNIQUE_NAME = level.DIMENSION_UNIQUE_NAME;
+    restrictions.HIERARCHY_UNIQUE_NAME = level.HIERARCHY_UNIQUE_NAME;
+    restrictions.LEVEL_UNIQUE_NAME = level.LEVEL_UNIQUE_NAME;
+    pash.getMembers(function(members){
+      if (map instanceof Array) {
+        this.copyArrayTo(members, map);
+      }
+      else {
+        this.rowsetToMap(members, "MEMBER_NAME", map);
+      }
+      delete restrictions.CUBE_NAME;
+      delete restrictions.DIMENSION_UNIQUE_NAME;
+      delete restrictions.HIERARCHY_UNIQUE_NAME;
+      delete restrictions.LEVEL_UNIQUE_NAME;
+      this.getMembersForLevels(map, levels, index, restrictions, callback, scope);
+    }, null, this, restrictions);
+  },
   popupHierarchiesAndLevelsList: function(restrictions, dimensionName){
     try {
       var map = {};
@@ -824,6 +865,46 @@ PashAutoComplete.prototype = {
               //collect all members that belong to the low cardinality dimensions we found
               this.getMembersForLowCardinalityDimensions(map, dimensions, 0, restrictions, function(){
                 this.getMembersForLowCardinalityHierarchies(map, hierarchies, 0, restrictions, function(){
+                  this.popupListForMap(map);
+                }, this);
+              }, this);
+            }, this);
+          }, this);
+        }, null, this, restrictions);
+      }, null, this, restrictions);
+    }
+    catch (exception){
+      //probably no catalog set.
+    }
+  },
+  popupLevelsAndMembersList: function(restrictions, identifier1, identifier2){
+    try {
+      var map = {};
+      var dimensions = [];
+      var dimensionHierarchies = [];
+      var hierarchies = [];
+      var hierarchyLevels = [];
+
+      //get all dimensions that could match our identifier
+      restrictions.DIMENSION_NAME = identifier1;
+      pash.getDimensions(function(dimensions) {
+        delete restrictions.DIMENSION_NAME;
+        //get all hierarchies that could match our identifier
+        restrictions.HIERARCHY_NAME = identifier1;
+        pash.getHierarchies(function(hierarchies) {
+          //colllect hierarchies named identifier2 that belong to the dimensions we found
+          delete restrictions.HIERARCHY_NAME;
+          restrictions.HIERARCHY_NAME = identifier2
+          this.getHierarchiesForDimensions(dimensionHierarchies, dimensions, 0, restrictions, function(){
+            //colllect levels named identifier2 that belong to the hierarchies we found
+            delete restrictions.HIERARCHY_NAME;
+            restrictions.LEVEL_NAME = identifier2;
+            this.getLevelsForHierarchies(hierarchyLevels, hierarchies, 0, restrictions, function(){
+              delete restrictions.LEVEL_NAME;
+              //get the levels for the dimension hierarchies
+              this.getLevelsForHierarchies(map, dimensionHierarchies, 0, restrictions, function(){
+                //get the members for the hierarchy levels
+                this.getMembersForLevels(map, hierarchyLevels, 0, restrictions, function(){
                   this.popupListForMap(map);
                 }, this);
               }, this);
@@ -1035,10 +1116,10 @@ PashAutoComplete.prototype = {
               return;
             case 2: //2 leading identifiers
               //TODO:
-              //var identifier1 = this.stripBraces(identifiers[0]);
-              //var identifier2 = this.stripBraces(identifiers[1]);
-              //this.popupLevelsAndMembersList(restrictions, identifier1, identifier2);
-              //return;
+              var identifier1 = this.stripBraces(identifiers[0]);
+              var identifier2 = this.stripBraces(identifiers[1]);
+              this.popupLevelsAndMembersList(restrictions, identifier1, identifier2);
+              return;
             default:
               //TODO:
               //this.popupMembersList(restrictions, identifier1, identifier2);
