@@ -773,8 +773,8 @@ xmlashPrototype = {
     );
   },
   setProperty: function(prop, value){
-    if (prop.setter) {
-      var setter;
+    var setter = prop.setter;
+    if (setter) {
       if (typeof(prop.setter) === "string") {
         setter = this[prop.setter];
       }
