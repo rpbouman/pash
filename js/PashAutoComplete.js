@@ -892,25 +892,24 @@ PashAutoComplete.prototype = {
   checkPopupList: function(source, event, data) {
     var showList = false, words, prefix, onCount = 0;
     var pash = this.pash;
+
     var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
     var textBefore = wordAtPosition.text.substr(0, wordAtPosition.position);
 
-    var ch;
+    var token, tokens = [], tokenizer = pash.getTokenizer(), ch;
     if (data.position === 0 && wordAtPosition.word === "") {
       ch = "\n";
     }
     else {
       ch = wordAtPosition.text[data.position - 1];
     }
-    var nbsp = String.fromCharCode(160);
-    var token, tokens = [], tokenizer = pash.getTokenizer();
 
     var enteredText = pash.getEnteredStatementText();
     if (enteredText) {
       enteredText += "\n";
     }
     var statementText = enteredText + textBefore + wordAtPosition.word;
-    tokenizer.tokenize(statementText);
+
     var withClause = false,
         memberClause = false,
         setClause = false,
@@ -924,6 +923,8 @@ PashAutoComplete.prototype = {
         whereClause = false,
         cellClause = false
     ;
+
+    tokenizer.tokenize(statementText);
     while (token = tokenizer.nextToken()) {
       switch (token.type) {
         case "identifier":
@@ -1075,7 +1076,7 @@ PashAutoComplete.prototype = {
         break;
       case "\n":
       case " ":
-      case nbsp:
+      case String.fromCharCode(160):
         if (
           selectClause === tokens.length -1 ||
           axisComma === tokens.length - 1
