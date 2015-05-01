@@ -2,6 +2,27 @@
 
 var PashAutoComplete = function(pash){
   this.pash = pash;
+  var me = this;
+  pash.setPropertyMap["AUTOCOMPLETE"] = {
+    helpText: "Turn autocomplete on or off.",
+    property: "autocomplete",
+    expected: ["single quoted string", "double quoted string", "identifier"],
+    setter: function(value){
+      if (value === "true") {
+        value = true;
+      }
+      else
+      if (value === "false") {
+        value = false;
+      }
+      me.enabled = value;
+    },
+    values: {
+      ON: "true",
+      OFF: "false"
+    }
+  };
+
   pash.addListener("textChanged", this.textChanged, this);
   pash.addListener("keydown", this.keyDown, this);
   pash.addListener("caretPositionChanged", this.caretPositionChanged, this);
@@ -318,6 +339,9 @@ PashAutoComplete.prototype = {
     return this.selectNextOrPreviousItem(-num);
   },
   keyDown: function(source, event, data){
+    if (this.enabled === false) {
+      return;
+    }
     var me = this;
     var pash = this.pash;
     var textArea = pash.getTextArea();
@@ -415,6 +439,9 @@ PashAutoComplete.prototype = {
     this.hideList();
   },
   textChanged: function(source, event, data){
+    if (this.enabled === false) {
+      return;
+    }
     var displayed = 0;
     if (this.isListShown()) {
       displayed = this.checkFilterList(source, event, data);
@@ -1278,6 +1305,9 @@ PashAutoComplete.prototype = {
     this.showList(showList);
   },
   caretPositionChanged: function(source, event, data){
+    if (this.enabled === false) {
+      return;
+    }
     var style = this.listDom.style;
     style.left = (data.offsetLeft + 15) + "px";
     var line = data.parentNode;
