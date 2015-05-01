@@ -2,6 +2,27 @@
 
 var PashAutoComplete = function(pash){
   this.pash = pash;
+  var me = this;
+  pash.setPropertyMap["AUTOCOMPLETE"] = {
+    helpText: "Turn autocomplete on or off.",
+    property: "autocomplete",
+    expected: ["single quoted string", "double quoted string", "identifier"],
+    setter: function(value){
+      if (value === "true") {
+        value = true;
+      }
+      else
+      if (value === "false") {
+        value = false;
+      }
+      me.enabled = value;
+    },
+    values: {
+      ON: "true",
+      OFF: "false"
+    }
+  };
+
   pash.addListener("textChanged", this.textChanged, this);
   pash.addListener("keydown", this.keyDown, this);
   pash.addListener("caretPositionChanged", this.caretPositionChanged, this);
@@ -318,21 +339,27 @@ PashAutoComplete.prototype = {
     return this.selectNextOrPreviousItem(-num);
   },
   keyDown: function(source, event, data){
+    if (this.enabled === false) {
+      return;
+    }
+    var me = this;
     var pash = this.pash;
     var textArea = pash.getTextArea();
     var ret;
+    var keyCode = data.keyCode;
     if (this.isListShown()) {
       ret = false;
-      var keyCode = data.keyCode;
       switch (keyCode) {
-        case 8:
-          this.hideList();
+        case 8:   //backspace
           ret = true;
+        case 27:  //escape
+        case 37:  //arrow left
+          this.hideList();
           break;
           //tab, return, space and arrow right select and insert the selection.
         case 9:
         case 13:
-        case 39:
+        case 39:  //arrow right
           this.enterSelectedWord();
           break;
         case 33:  //page up
@@ -414,6 +441,9 @@ PashAutoComplete.prototype = {
     this.hideList();
   },
   textChanged: function(source, event, data){
+    if (this.enabled === false) {
+      return;
+    }
     var displayed = 0;
     if (this.isListShown()) {
       displayed = this.checkFilterList(source, event, data);
@@ -594,9 +624,29 @@ PashAutoComplete.prototype = {
     if (words.length === 0) {
       return;
     }
+    this.popupListForArray(words);
+  },
+  popupListForArray: function(words) {
     this.sortWords(words);
     this.populateList(words);
     this.showList(true);
+  },
+  popupRestrictionColumnsList: function(showMethodName){
+    var pash = this.pash;
+    pash.getHelpTextForShowMethod(showMethodName, function(text){
+      var el = document.createElement("DIV");
+      el.innerHTML = text;
+      var table = el.firstChild;
+      var rows = table.rows, i, n = rows.length, row, cells, cols = [];
+      for (i = 1; i < n; i++) {
+        row = rows[i];
+        cells = row.cells;
+        if (cells[3].innerHTML === "Yes") {
+          cols.push(cells[0].innerHTML);
+        }
+      }
+      this.popupListForArray(cols);
+    }, this);
   },
   popupDimensionAndHierarchyDotExpressionList: function(restrictions, dimensionName){
     try {
@@ -677,6 +727,12 @@ PashAutoComplete.prototype = {
       //probably no catalog set.
     }
   },
+  copyArrayTo: function(source, target){
+    var i, n = source.length;
+    for (i = 0; i < n; i++) {
+      target.push(source[i]);
+    }
+  },
   getHierarchiesForDimensions: function(map, dimensions, index, restrictions, callback, scope){
     if (index >= dimensions.length) {
       callback.call(scope);
@@ -686,7 +742,12 @@ PashAutoComplete.prototype = {
     restrictions.CUBE_NAME = dimension.CUBE_NAME;
     restrictions.DIMENSION_UNIQUE_NAME = dimension.DIMENSION_UNIQUE_NAME;
     pash.getHierarchies(function(hierarchies){
-      this.rowsetToMap(hierarchies, "HIERARCHY_NAME", map);
+      if (map instanceof Array) {
+        this.copyArrayTo(hierarchies, map);
+      }
+      else {
+        this.rowsetToMap(hierarchies, "HIERARCHY_NAME", map);
+      }
       delete restrictions.CUBE_NAME;
       delete restrictions.DIMENSION_UNIQUE_NAME;
       this.getHierarchiesForDimensions(map, dimensions, index, restrictions, callback, scope);
@@ -702,7 +763,12 @@ PashAutoComplete.prototype = {
     restrictions.DIMENSION_UNIQUE_NAME = hierarchy.DIMENSION_UNIQUE_NAME;
     restrictions.HIERARCHY_UNIQUE_NAME = hierarchy.HIERARCHY_UNIQUE_NAME;
     pash.getLevels(function(levels){
-      this.rowsetToMap(levels, "LEVEL_NAME", map);
+      if (map instanceof Array) {
+        this.copyArrayTo(levels, map);
+      }
+      else {
+        this.rowsetToMap(levels, "LEVEL_NAME", map);
+      }
       delete restrictions.CUBE_NAME;
       delete restrictions.DIMENSION_UNIQUE_NAME;
       delete restrictions.HIERARCHY_UNIQUE_NAME;
@@ -710,7 +776,6 @@ PashAutoComplete.prototype = {
     }, null, this, restrictions);
   },
   maxDimensionCardinality: 10,
-  maxLevelCardinality: 100,
   getMembersForLowCardinalityDimensions: function(map, dimensions, index, restrictions, callback, scope){
     var dimension;
     while (true) {
@@ -755,6 +820,30 @@ PashAutoComplete.prototype = {
       this.getMembersForLowCardinalityHierarchies(map, hierarchies, index, restrictions, callback, scope);
     }, null, this, restrictions);
   },
+  getMembersForLevels: function(map, levels, index, restrictions, callback, scope) {
+    if (index >= levels.length) {
+      callback.call(scope);
+      return;
+    }
+    var level = levels[index++];
+    restrictions.CUBE_NAME = level.CUBE_NAME;
+    restrictions.DIMENSION_UNIQUE_NAME = level.DIMENSION_UNIQUE_NAME;
+    restrictions.HIERARCHY_UNIQUE_NAME = level.HIERARCHY_UNIQUE_NAME;
+    restrictions.LEVEL_UNIQUE_NAME = level.LEVEL_UNIQUE_NAME;
+    pash.getMembers(function(members){
+      if (map instanceof Array) {
+        this.copyArrayTo(members, map);
+      }
+      else {
+        this.rowsetToMap(members, "MEMBER_NAME", map);
+      }
+      delete restrictions.CUBE_NAME;
+      delete restrictions.DIMENSION_UNIQUE_NAME;
+      delete restrictions.HIERARCHY_UNIQUE_NAME;
+      delete restrictions.LEVEL_UNIQUE_NAME;
+      this.getMembersForLevels(map, levels, index, restrictions, callback, scope);
+    }, null, this, restrictions);
+  },
   popupHierarchiesAndLevelsList: function(restrictions, dimensionName){
     try {
       var map = {};
@@ -776,6 +865,46 @@ PashAutoComplete.prototype = {
               //collect all members that belong to the low cardinality dimensions we found
               this.getMembersForLowCardinalityDimensions(map, dimensions, 0, restrictions, function(){
                 this.getMembersForLowCardinalityHierarchies(map, hierarchies, 0, restrictions, function(){
+                  this.popupListForMap(map);
+                }, this);
+              }, this);
+            }, this);
+          }, this);
+        }, null, this, restrictions);
+      }, null, this, restrictions);
+    }
+    catch (exception){
+      //probably no catalog set.
+    }
+  },
+  popupLevelsAndMembersList: function(restrictions, identifier1, identifier2){
+    try {
+      var map = {};
+      var dimensions = [];
+      var dimensionHierarchies = [];
+      var hierarchies = [];
+      var hierarchyLevels = [];
+
+      //get all dimensions that could match our identifier
+      restrictions.DIMENSION_NAME = identifier1;
+      pash.getDimensions(function(dimensions) {
+        delete restrictions.DIMENSION_NAME;
+        //get all hierarchies that could match our identifier
+        restrictions.HIERARCHY_NAME = identifier1;
+        pash.getHierarchies(function(hierarchies) {
+          //colllect hierarchies named identifier2 that belong to the dimensions we found
+          delete restrictions.HIERARCHY_NAME;
+          restrictions.HIERARCHY_NAME = identifier2
+          this.getHierarchiesForDimensions(dimensionHierarchies, dimensions, 0, restrictions, function(){
+            //colllect levels named identifier2 that belong to the hierarchies we found
+            delete restrictions.HIERARCHY_NAME;
+            restrictions.LEVEL_NAME = identifier2;
+            this.getLevelsForHierarchies(hierarchyLevels, hierarchies, 0, restrictions, function(){
+              delete restrictions.LEVEL_NAME;
+              //get the levels for the dimension hierarchies
+              this.getLevelsForHierarchies(map, dimensionHierarchies, 0, restrictions, function(){
+                //get the members for the hierarchy levels
+                this.getMembersForLevels(map, hierarchyLevels, 0, restrictions, function(){
                   this.popupListForMap(map);
                 }, this);
               }, this);
@@ -844,16 +973,24 @@ PashAutoComplete.prototype = {
   checkPopupList: function(source, event, data) {
     var showList = false, words, prefix, onCount = 0;
     var pash = this.pash;
+
     var wordAtPosition = this.getWordAtPosition(pash.getCaretPosition());
     var textBefore = wordAtPosition.text.substr(0, wordAtPosition.position);
 
-    var ch = wordAtPosition.text[data.position - 1];
-    var nbsp = String.fromCharCode(160);
-    var token, tokens = [], tokenizer = pash.getTokenizer();
+    var token, tokens = [], tokenizer = pash.getTokenizer(), ch;
+    if (data.position === 0 && wordAtPosition.word === "") {
+      ch = "\n";
+    }
+    else {
+      ch = wordAtPosition.text[data.position - 1];
+    }
 
     var enteredText = pash.getEnteredStatementText();
+    if (enteredText) {
+      enteredText += "\n";
+    }
     var statementText = enteredText + textBefore + wordAtPosition.word;
-    tokenizer.tokenize(statementText);
+
     var withClause = false,
         memberClause = false,
         setClause = false,
@@ -867,6 +1004,8 @@ PashAutoComplete.prototype = {
         whereClause = false,
         cellClause = false
     ;
+
+    tokenizer.tokenize(statementText);
     while (token = tokenizer.nextToken()) {
       switch (token.type) {
         case "identifier":
@@ -977,10 +1116,10 @@ PashAutoComplete.prototype = {
               return;
             case 2: //2 leading identifiers
               //TODO:
-              //var identifier1 = this.stripBraces(identifiers[0]);
-              //var identifier2 = this.stripBraces(identifiers[1]);
-              //this.popupLevelsAndMembersList(restrictions, identifier1, identifier2);
-              //return;
+              var identifier1 = this.stripBraces(identifiers[0]);
+              var identifier2 = this.stripBraces(identifiers[1]);
+              this.popupLevelsAndMembersList(restrictions, identifier1, identifier2);
+              return;
             default:
               //TODO:
               //this.popupMembersList(restrictions, identifier1, identifier2);
@@ -1016,8 +1155,9 @@ PashAutoComplete.prototype = {
             }
         }
         break;
+      case "\n":
       case " ":
-      case nbsp:
+      case String.fromCharCode(160):
         if (
           selectClause === tokens.length -1 ||
           axisComma === tokens.length - 1
@@ -1079,6 +1219,8 @@ PashAutoComplete.prototype = {
         }
         else {
           switch (tokens.length) {
+            case 0:
+              return;
             case 1:
               switch (tokens[0].text.toUpperCase()) {
                 case "HELP":
@@ -1088,7 +1230,13 @@ PashAutoComplete.prototype = {
                   words = this.mapToWords(pash.setPropertyMap);
                   break;
                 case "SHOW":
-                  words = this.mapToWords(pash.showKeywordMethodMap);
+                  try {
+                    pash.throwIfCatalogNotSet();
+                    words = this.mapToWords(pash.showKeywordMethodMap);
+                  }
+                  catch (e) {
+                    words = ["CATALOGS", "FUNCTIONS"];
+                  }
                   break;
                 case "USE":
                   this.popupCatalogsList();
@@ -1116,8 +1264,85 @@ PashAutoComplete.prototype = {
                     }
                   }
                   break;
+                case "SHOW":
+                  var showMethod = pash.getShowMethodName(token1);
+                  switch (showMethod) {
+                    case "showCurrentCatalog":
+                    case "discoverDBCatalogs":
+                      break;
+                    default:
+                      words = ["WHERE"];
+                  }
               }
               break;
+            default:
+              if (tokens[0].text.toUpperCase() === "SHOW"){
+                var showMethod = pash.getShowMethodName(tokens[1]);
+                switch (showMethod) {
+                  case "showCurrentCatalog":
+                  case "discoverDBCatalogs":
+                    break;
+                  default:
+                    var i = 2, token;
+                    while (true) {
+                      token = tokens[i];
+                      if (i === 2) {
+                        if (token.text !== "WHERE") {
+                          //syntax error. nothing to show.
+                          return;
+                        }
+                      }
+                      else {
+                        if (token.text !== "AND") {
+                          //syntax error. nothing to show.
+                          return;
+                        }
+                      }
+
+                      i++;
+                      if (i >= tokens.length) {
+                        //popup a list with available restriction columns
+                        this.popupRestrictionColumnsList(showMethod);
+                        return;
+                      }
+
+                      token = tokens[i];
+                      //check if this token is a valid restriction column
+                      i++;
+                      if (i >= tokens.length) {
+                        //popup a list with only an = operator
+                        words = ["="];
+                        break;
+                      }
+
+                      token = tokens[i];
+                      if (token.text !== "=") {
+                        break;
+                      }
+                      i++;
+                      if (i >= tokens.length) {
+                        //popup a list with valid values for the column
+                        words = ["''"];
+                        break;
+                      }
+
+                      token = tokens[i];
+                      switch (token.type) {
+                        case "double quoted string":
+                        case "single quoted string":
+                          break;
+                        default:
+                          return;
+                      }
+
+                      i++;
+                      if (i >= tokens.length) {
+                        words = ["AND"];
+                        break;
+                      }
+                    }
+                }
+              }
           }
         }
         break;
@@ -1162,6 +1387,9 @@ PashAutoComplete.prototype = {
     this.showList(showList);
   },
   caretPositionChanged: function(source, event, data){
+    if (this.enabled === false) {
+      return;
+    }
     var style = this.listDom.style;
     style.left = (data.offsetLeft + 15) + "px";
     var line = data.parentNode;
