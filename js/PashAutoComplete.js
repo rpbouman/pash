@@ -155,6 +155,8 @@ var allMembersDotExpression = {
     };
 
 PashAutoComplete.prototype = {
+  //if a dimension has maxDimensionCardinality or less members they are automatically available in the autocomplete menu without specifying a level.
+  maxDimensionCardinality: 25,
   dimensionDotExpressions: {
     CAPTION: captionDotExpression,
     NAME: nameDotExpression,
@@ -775,7 +777,6 @@ PashAutoComplete.prototype = {
       this.getLevelsForHierarchies(map, hierarchies, index, restrictions, callback, scope);
     }, null, this, restrictions);
   },
-  maxDimensionCardinality: 10,
   getMembersForLowCardinalityDimensions: function(map, dimensions, index, restrictions, callback, scope){
     var dimension;
     while (true) {
