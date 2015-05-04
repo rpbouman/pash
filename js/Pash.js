@@ -1383,6 +1383,8 @@ xmlashPrototype = {
           urls.push(base + "icCube/xmla");
           //pentaho, f.e. http://localhost:8080/pentaho/Xmla
           urls.push(base + location.pathname.split("/")[1] + "/Xmla");
+          //msas, f.e. http://localhost/OLAP/msmdpump.dll
+          urls.push(base + "OLAP/msmdpump.dll");
         }
         this.initDatasources(urls, 0);
         break;
