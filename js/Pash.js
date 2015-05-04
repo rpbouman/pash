@@ -176,21 +176,31 @@ xmlashPrototype = {
       this.showExpectedError("a catalog name", token ? token : "end of statement");
       return;
     }
-    var request = me.xmlaRequest;
+    var xmlaRequest = this.xmlaRequest, request = {
+      restrictions: {},
+      properties: {
+        DataSourceInfo: xmlaRequest.DataSourceInfo
+      }
+    };
     var oldCatalog = this.getCurrentCatalog();
     request.restrictions.CATALOG_NAME = request.properties.Catalog = token.text;
+    var me = this;
     request.success = function(xmla, request, rowset){
-      var i = 0;
+      var i = 0, catalog;
       rowset.eachRow(function(row){
         if (i){
           throw "Unexpected error setting catalog (multiple catalogs found)";
         }
-        this.showCurrentCatalog();
-        this.prompt = this.defaultPrompt;
+        catalog = row;
         i++;
         this.schemaCache = {};
       }, me);
-      if (i !== 1) {
+      if (i === 1) {
+        me.currentCatalog = catalog.CATALOG_NAME;
+        me.showCurrentCatalog();
+        me.prompt = me.defaultPrompt;
+      }
+      else {
         var msg;
         if (i === 0) {
           msg = "No such catalog";
@@ -226,7 +236,7 @@ xmlashPrototype = {
               ": " + message + "?"
             );
           }
-          request.properties.Catalog = oldCatalog;
+          me.currentCatalog = oldCatalog;
         },
         null,
         me
@@ -480,22 +490,24 @@ xmlashPrototype = {
   getCatalogs: function(success, error, scope){
     var oldCatalog = this.getCurrentCatalog();
 
-    var request = this.xmlaRequest;
-    delete request.properties.Catalog;
-    delete request.restrictions.CATALOG_NAME;
+    var xmlaRequest = this.xmlaRequest, request = {
+      url: xmlaRequest.url,
+      restrictions: {},
+      properties: {
+        DataSourceInfo: xmlaRequest.properties.DataSourceInfo
+      },
+      success: function(xmla, request, rowset){
+        if (success) {
+          success.call(scope, xmla, request, rowset);
+        }
+      },
+      error: function(xmla, request, exception){
+        if (error) {
+          error.call(scope, xmla, request, exception);
+        }
+      }
+    };
 
-    request.success = function(xmla, request, rowset){
-      if (success) {
-        success.call(scope, xmla, request, rowset);
-      }
-      request.properties.Catalog = oldCatalog;
-    };
-    request.error = function(xmla, request, exception){
-      if (error) {
-        error.call(scope, xmla, request, exception);
-      }
-      request.properties.Catalog = oldCatalog;
-    };
     this.xmla.discoverDBCatalogs(request);
   },
   renderRowset: function(rowset, fieldNames) {
@@ -871,7 +883,9 @@ xmlashPrototype = {
       case "discoverDBCatalogs":
       case "discoverMDFunctions":
         request.callback = function(){
-          request.properties.Catalog = catalog;
+          if (catalog) {
+            request.properties.Catalog = catalog;
+          }
           delete request.callback;
         }
         delete request.properties.Catalog;
@@ -915,15 +929,7 @@ xmlashPrototype = {
     this.error("No catalog selected. Please run the USE command to select a catalog.", true);
   },
   getCurrentCatalog: function() {
-    var xmlaRequest = this.xmlaRequest;
-    if (!xmlaRequest) {
-      return undefined;
-    }
-    var properties = xmlaRequest.properties;
-    if (!properties) {
-      return undefined;
-    }
-    return properties.Catalog;
+    return this.currentCatalog;
   },
   checkCatalogSet: function(request) {
     if (typeof(request) === "undefined") {
