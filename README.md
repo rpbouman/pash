@@ -50,3 +50,22 @@ Download the bin/pash.zip package and unzip into whatever is the webapps directo
 
 You can start pash by pointing your browser to http://yourserver:yourport/pash/html/index.html
 
+## On IIS / MS Analysis services
+
+This scenario assumes you already set up XML/A access to your MS Analysis instance.
+(If you need instructions to do that, please refer to https://msdn.microsoft.com/en-us/library/gg492140(v=sql.110).aspx)
+
+Download the bin/pash.zip package and unzip to someplace beneath the wwwroot (Normally in C:\inetpub\) your IIS server.
+Let's say you put it in C:\inetpub\wwwroot\pash
+
+You can now start pash by navigating your browser to
+
+http://yourserver/pash/html/index.html
+
+However, this assumes you setup your XML/A endpoint at
+
+http://yourserver/olap/msmdpump.dll
+
+If you setup your XML/A endpoint under a different URL, you need to specify it via the XmlaUrl query parameter.
+
+http://yourserver/pash/html/index.html?XmlaUrl=http://yourserver/...your path...
