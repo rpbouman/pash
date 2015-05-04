@@ -361,7 +361,6 @@ PashAutoComplete.prototype = {
           //tab, return, space and arrow right select and insert the selection.
         case 9:
         case 13:
-        case 39:  //arrow right
           this.enterSelectedWord();
           break;
         case 33:  //page up
