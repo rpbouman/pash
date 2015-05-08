@@ -872,6 +872,7 @@ xmlashPrototype = {
     var request = this.xmlaRequest;
     var catalog = this.getCurrentCatalog();
     if (catalog && funcName !== "discoverDBCatalogs" && funcName !== "discoverMDFunctions") {
+      request.properties.Catalog = catalog;
       restrictions.CATALOG_NAME = catalog;
     }
     else {
