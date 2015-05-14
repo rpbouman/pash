@@ -508,7 +508,7 @@ function _xjs(xml) {
         }
       }
       else {
-        return String.fromCharCode(g4, g3 ? 16: 10);
+        return String.fromCharCode(parseInt(g4, g3 ? 16: 10));
       }
     });
   }
@@ -6871,7 +6871,8 @@ Xmla.Dataset.Axis.prototype = {
             numHierarchies = hierarchyInfoNodes.length,
             i, j, hierarchyInfoNode, hierarchyName,
             properties, numPropertyNodes, propertyNodes, propertyNode,
-            nodeName, type, memberProperties = this._memberProperties
+            nodeName, type, memberProperties = this._memberProperties,
+            converter
         ;
         this._hierarchyDefs = {};
         this._hierarchyOrder = [];
@@ -6898,9 +6899,14 @@ Xmla.Dataset.Axis.prototype = {
                 if (memberProperties[nodeName]) {
                   continue;
                 }
+                //note: MSAS doesn't seem to include a type for custom properties
                 type = _getAttribute(propertyNode, "type");
+                converter = _typeConverterMap[type];
+                if (!converter){
+                  converter = _textConverter;
+                }
                 memberProperties[nodeName] = {
-                    converter: _typeConverterMap[type],
+                    converter: converter,
                     name: _decodeXmlaTagName(nodeName)
                 };
             }
