@@ -2063,8 +2063,12 @@ Xmla.prototype = {
         return this.response;
     },
     _requestError: function(options, exception) {
-        if (options.error) options.error.call(options.scope ? options.scope : null, this, options, exception);
-        if (options.callback) options.callback.call(options.scope ? options.scope : null, Xmla.EVENT_ERROR, this, options, exception);
+        if (options.error) {
+          options.error.call(options.scope ? options.scope : null, this, options, exception);
+        }
+        if (options.callback) {
+          options.callback.call(options.scope ? options.scope : null, Xmla.EVENT_ERROR, this, options, exception);
+        }
         this._fireEvent(Xmla.EVENT_ERROR, options);
     },
     _requestSuccess: function(request) {
@@ -5604,6 +5608,53 @@ Xmla.Rowset.MDMEASURE_AGGR_CALCULATED = 127;
 */
 Xmla.Rowset.MDMEASURE_AGGR_UNKNOWN = 0;
 
+/**
+*   Field in the bitmap value of <code>PROPERTY_TYPE</code> column of the <code>MDSCHEMA_PROPERTIES</code> rowset.
+*   see: https://msdn.microsoft.com/en-us/library/ms126309.aspx
+*   Identifies a property of a member.
+*   If set it means this property can be used in the DIMENSION PROPERTIES clause of the SELECT statement.
+*   @property MDPROP_MEMBER
+*   @static
+*   @final
+*   @type int
+*   @default 1
+*/
+Xmla.Rowset.MDPROP_MEMBER = 1;
+/**
+*   Field in the bitmap value of <code>PROPERTY_TYPE</code> column of the <code>MDSCHEMA_PROPERTIES</code> rowset.
+*   see: https://msdn.microsoft.com/en-us/library/ms126309.aspx
+*   Identifies a property of a cell.
+*   If set, it means this property can be used in the CELL PROPERTIES clause that occurs at the end of the SELECT statement.
+*   @property MDPROP_CELL
+*   @static
+*   @final
+*   @type int
+*   @default 2
+*/
+Xmla.Rowset.MDPROP_CELL = 2;
+/**
+*   Field in the bitmap value of <code>PROPERTY_TYPE</code> column of the <code>MDSCHEMA_PROPERTIES</code> rowset.
+*   see: https://msdn.microsoft.com/en-us/library/ms126309.aspx
+*   Identifies an internal property.
+*   @property MDPROP_SYSTEM
+*   @static
+*   @final
+*   @type int
+*   @default 4
+*/
+Xmla.Rowset.MDPROP_SYSTEM = 4;
+/**
+*   Field in the bitmap value of <code>PROPERTY_TYPE</code> column of the <code>MDSCHEMA_PROPERTIES</code> rowset.
+*   see: https://msdn.microsoft.com/en-us/library/ms126309.aspx
+*   Identifies an internal property.
+*   @property MDPROP_BLOB
+*   @static
+*   @final
+*   @type int
+*   @default 8
+*/
+Xmla.Rowset.MDPROP_BLOB = 8;
+
 Xmla.Rowset.KEYS = {};
 Xmla.Rowset.KEYS[Xmla.DBSCHEMA_CATALOGS] = ["CATALOG_NAME"];
 Xmla.Rowset.KEYS[Xmla.DBSCHEMA_COLUMNS] = ["TABLE_CATALOG", "TABLE_SCHEMA", "TABLE_NAME", "COLUMN_NAME"];
@@ -6870,8 +6921,8 @@ Xmla.Dataset.Axis.prototype = {
             ),
             numHierarchies = hierarchyInfoNodes.length,
             i, j, hierarchyInfoNode, hierarchyName,
-            properties, numPropertyNodes, propertyNodes, propertyNode,
-            nodeName, type, memberProperties = this._memberProperties,
+            hierarchyDef, properties, numPropertyNodes, propertyNodes, propertyNode,
+            nodeName, type, memberProperty, memberProperties = this._memberProperties,
             converter
         ;
         this._hierarchyDefs = {};
@@ -6883,34 +6934,34 @@ Xmla.Dataset.Axis.prototype = {
             hierarchyName = _getAttribute(hierarchyInfoNode, "name");
             this._hierarchyOrder[i] = hierarchyName;
             this._hierarchyIndexes[hierarchyName] = i;
-            properties = {
+            hierarchyDef = {
                 index: i,
-                name: hierarchyName
+                name: hierarchyName,
+                properties: properties = {}
             };
             propertyNodes = _getElementsByTagNameNS(hierarchyInfoNode, _xmlnsDataset, "", "*");
             numPropertyNodes = propertyNodes.length;
             for (j = 0; j < numPropertyNodes; j++) {
                 propertyNode = propertyNodes[j];
-                //TODO: we're assigning null but I think we should grab a value if it exits
-                //If I recall the XML/A spec correctly, this value represents the default value
-                //of the property if it does not exist in a particular member
                 nodeName = propertyNode.nodeName;
-                properties[nodeName] = null;
-                if (memberProperties[nodeName]) {
-                  continue;
-                }
                 //note: MSAS doesn't seem to include a type for custom properties
                 type = _getAttribute(propertyNode, "type");
+                if (!type) {
+                  memberProperty = memberProperties[nodeName];
+                  if (memberProperty) {
+                    type = memberProperty.type;
+                  }
+                }
                 converter = _typeConverterMap[type];
                 if (!converter){
                   converter = _textConverter;
                 }
-                memberProperties[nodeName] = {
+                properties[nodeName] = {
                     converter: converter,
                     name: _decodeXmlaTagName(nodeName)
                 };
             }
-            this._hierarchyDefs[hierarchyName] = properties;
+            this._hierarchyDefs[hierarchyName] = hierarchyDef;
         }
     },
     _initMembers: function(){
@@ -6933,6 +6984,7 @@ Xmla.Dataset.Axis.prototype = {
             type = _getAttribute(memberSchemaElement, "type");
             name = _getAttribute(memberSchemaElement, "name");
             memberProperties[name] = {
+                type: type,
                 converter: _typeConverterMap[type],
                 name: _decodeXmlaTagName(name)
             };
@@ -7268,18 +7320,21 @@ Xmla.Dataset.Axis.prototype = {
             childNodes = memberNode.childNodes,
             i, n = childNodes.length,
             hierarchyName = this.hierarchyName(index),
+            hierarchyDef = this._hierarchyDefs[hierarchyName],
+            properties = hierarchyDef.properties,
             property,
             member = {
                 index: index,
                 hierarchy: hierarchyName
             },
             el,
-            memberProperties = this._memberProperties,
             valueConverter
         ;
         for (i = 0; i < n; i++) {
             el = childNodes[i];
-            if (el.nodeType !== 1 || (!(property = memberProperties[el.nodeName]))) continue;
+            if (el.nodeType !== 1 || (!(property = properties[el.nodeName]))) {
+              continue;
+            }
             member[property.name] = property.converter(_getElementText(el));
         }
         return member;
