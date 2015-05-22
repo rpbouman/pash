@@ -1094,7 +1094,7 @@ PashAutoComplete.prototype = {
             if (whereClause === false && identifiers.length === 0) {
               try {
                 pash.getCubes(function(cubes){
-                  var words = this.rowsetToWords(rowset, "CUBE_NAME");
+                  var words = this.rowsetToWords(cubes, "CUBE_NAME");
                   this.populateList(words);
                   this.showList(true);
                 }, null, this);
