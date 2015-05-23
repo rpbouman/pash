@@ -532,7 +532,9 @@ xmlashPrototype = {
           thead += "<th>" + escXml(fieldDef.label) + "</th>";
         }
         thead = "<thead><tr>" + thead + "</tr></thead>";
+        var rowCount = 0;
         while (rowset.hasMoreRows()){
+          rowCount++;
           for (i = 0; i < fieldCount; i++){
             fieldName = fieldNames[i];
             field = rowset.fieldVal(fieldName);
@@ -550,7 +552,8 @@ xmlashPrototype = {
           rowset.nextRow();
         }
         tbody = "<tbody>" + tbody + "</tbody>";
-        result = "<table class=\"rowset\">" + cols + thead + tbody + "</table>";
+        result = "<table class=\"rowset\">" + cols + thead + tbody + "</table>" +
+                  "<br/>" + rowCount + " rows in set.";
       }
       else {
         result = "No rows to display.";
@@ -861,7 +864,7 @@ xmlashPrototype = {
         this.showExpectedError("end of statement", token);
         return;
       }
-      this[funcName].call(this);
+      this[funcName].call(this, true);
       return;
     }
 
@@ -902,7 +905,16 @@ xmlashPrototype = {
     }
     request.success = function(xmla, request, rowset) {
       request.restrictions = {};
+      var start = new Date();
       me.renderRowset(rowset);
+      var end = new Date();
+      me.writeResult(
+        "Query took: " +
+        me.formatTime(request.start, start) +
+        "; Rendering took: " +
+        me.formatTime(start, end) +
+        "."
+      );
     };
     request.error = function(xmla, request, exception) {
       request.restrictions = {};
@@ -910,6 +922,7 @@ xmlashPrototype = {
     };
     var func = this.xmla[funcName];
     if (typeof(func) === "function") {
+      request.start = new Date();
       func.call(this.xmla, request);
     }
     else {
@@ -917,10 +930,22 @@ xmlashPrototype = {
       me.error("Unexpected error: xmla4js does not support function " + funcName + "()");
     }
   },
-  showCurrentCatalog: function(){
+  formatTime: function(start, end){
+    start = start.getTime();
+    end = end.getTime();
+    var time = end - start;
+    if (time >= 1000) {
+      time = (time / 1000) + " seconds";
+    }
+    else {
+      time += " miliseconds"
+    }
+    return time;
+  },
+  showCurrentCatalog: function(append){
     var catalog = this.getCurrentCatalog();
     if (catalog) {
-      this.writeResult("Current catalog set to \"" + catalog + "\".");
+      this.writeResult("Current catalog set to \"" + catalog + "\".", append);
     }
     else {
       this.showNoCatalogSet();
@@ -1271,11 +1296,24 @@ xmlashPrototype = {
     if (!request.properties) {
       request.properties = {};
     }
+    request.properties.Catalog = this.getCurrentCatalog();
     request.properties[Xmla.PROP_FORMAT] = Xmla.PROP_FORMAT_MULTIDIMENSIONAL;
     request.statement = statement;
     request.success = function(xmla, request, data){
+      var start = new Date();
       if (data instanceof Xmla.Dataset) {
         me.renderDataset(data);
+        var message = [];
+        var i, axisCount = data.axisCount(), axis, tupleCount, hierarchyCount;
+        for (i = 0; i < axisCount; i++){
+          axis = data.getAxis(i);
+          tupleCount = axis.tupleCount();
+          hierarchyCount = axis.hierarchyCount();
+          message.push(tupleCount + " * " + hierarchyCount + " members on Axis " + axis.id + " (" + tupleCount*hierarchyCount + " members)");
+        }
+        message.push(data.getCellset().cellCount() + " cells in cellset.");
+        message = message.join(";\n");
+        me.writeResult(message);
       }
       else
       if (data instanceof Xmla.Rowset) {
@@ -1283,9 +1321,18 @@ xmlashPrototype = {
         me.renderRowset(data);
       }
       else {
-        //shouldn't arrive here.
+        throw "Unexpected error: result is not a rowset or a dataset";
       }
+      var end = new Date();
+      me.writeResult(
+        "Query took: " +
+        me.formatTime(request.start, start) +
+        "; Rendering took: " +
+        me.formatTime(start, end) +
+        "."
+      );
     };
+    request.start = new Date();
     this.xmla.execute(request);
   },
   parse: function(statement){
