@@ -1285,6 +1285,14 @@ xmlashPrototype = {
 //      this.error(e);
 //    }
   },
+  formatCount: function(count, maxCount){
+    count = String(count);
+    maxCount = String(maxCount);
+    while (count.length < maxCount.length) {
+      count = " " + count;
+    }
+    return count;
+  },
   handleExecute: function(){
     var me = this;
     var statement = me.statementLines.join("\n");
@@ -1303,17 +1311,32 @@ xmlashPrototype = {
       var start = new Date();
       if (data instanceof Xmla.Dataset) {
         me.renderDataset(data);
-        var message = [];
-        var i, axisCount = data.axisCount(), axis, tupleCount, hierarchyCount;
+        var tupleCounts = [], hierarchyCounts = [], memberCounts = [];
+        var i, axisCount = data.axisCount(), axis, tupleCount, hierarchyCount,
+            maxHierarchies, maxTuples, maxMembers
+        ;
         for (i = 0; i < axisCount; i++){
           axis = data.getAxis(i);
-          tupleCount = axis.tupleCount();
+          tupleCount = axis.tupleCount()
+          tupleCounts.push(tupleCount);
           hierarchyCount = axis.hierarchyCount();
-          message.push(tupleCount + " * " + hierarchyCount + " members on Axis " + axis.id + " (" + tupleCount*hierarchyCount + " members)");
+          hierarchyCounts.push(hierarchyCount);
+          memberCounts.push(tupleCount * hierarchyCount);
         }
-        message.push(data.getCellset().cellCount() + " cells in cellset.");
-        message = message.join(";\n");
-        me.writeResult(message);
+        maxHierarchies = Math.max.apply(null, hierarchyCounts);
+        maxTuples = Math.max.apply(null, tupleCounts);
+        maxMembers = Math.max.apply(null, memberCounts);
+        for (i = 0; i < axisCount; i++){
+          me.writeResult(
+            me.formatCount(tupleCounts[i], maxTuples) +
+            " tuples * " +
+            me.formatCount(hierarchyCounts[i], maxHierarchies) +
+            " hierarchies = " +
+            me.formatCount(memberCounts[i], maxMembers) +
+            " members on Axis(" + i + ")"
+          );
+        }
+        me.writeResult(data.getCellset().cellCount() + " cells in cellset.");
       }
       else
       if (data instanceof Xmla.Rowset) {
