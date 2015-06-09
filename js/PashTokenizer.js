@@ -56,18 +56,39 @@ PashTokenizer.prototype = {
     this.currentToken = 0;
   },
   hasMoreTokens: function(){
-    return this.tokens ? this.currentToken < this.tokens.length : false;
+    var tokens = this.tokens;
+    if (!tokens) {
+      return false;
+    }
+    var n = tokens.length, currentToken = this.currentToken;
+    if (currentToken >= n) {
+      return false;
+    }
+    for (i = currentToken; i < n; i++){
+      if (this.isIgnoredToken(tokens[i])) {
+        continue;
+      }
+      return true;
+    }
+    return false;
+  },
+  ignoredTokens: {
+    whitespace: true,
+    "comment line": true,
+    "comment block": true
+  },
+  isIgnoredToken: function(type){
+    if (type.type) {
+      type = type.type;
+    }
+    return Boolean(this.ignoredTokens[type]);
   },
   nextToken: function(){
     var token = null;
-    var ignoreTokens = {
-      whitespace: true,
-      "comment line": true,
-      "comment block": true,
-    };
+    var ignoredTokens = this.ignoredTokens;
     while (this.hasMoreTokens()) {
       token = this.tokens[this.currentToken++];
-      if (ignoreTokens[token.type]) {
+      if (this.isIgnoredToken(token)) {
         token = null;
         continue;
       }
