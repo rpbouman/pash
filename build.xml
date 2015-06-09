@@ -53,6 +53,7 @@
     </copy>
 
     <get verbose="true" src="https://raw.githubusercontent.com/rpbouman/xmla4js/master/src/Xmla.js" dest="js/Xmla.js"/>
+    <get verbose="true" src="https://raw.githubusercontent.com/rpbouman/xmla4js/master/js/Xmla-compiled.js" dest="js/Xmla-compiled.js"/>
 
     <copy todir="${bin}/${ant.project.name}/js">
       <fileset dir="js" includes="**"/>
