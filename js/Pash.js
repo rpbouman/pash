@@ -84,7 +84,7 @@ xmlashPrototype = {
     "SET",
     "USE"
   ],
-  version: "1.0 - Stable",
+  version: "Edge - Development",
   defaultPrompt: "MDX> ",
   memberPropertyToRender: "Caption",
   getTokenizer: function() {
