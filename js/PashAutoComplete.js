@@ -360,6 +360,7 @@ PashAutoComplete.prototype = {
           break;
           //tab, return, space and arrow right select and insert the selection.
         case 9:
+          pash.focus();
         case 13:
           this.enterSelectedWord();
           break;

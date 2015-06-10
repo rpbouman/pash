@@ -207,10 +207,29 @@ var Wsh;
       this.inputBlocked = false;
     }
   },
+  insertAtCaretPosition: function(insertText){
+    var textarea = this.getTextArea();
+    var text = textarea.value;
+    var caretPosition = this.getCaretPosition();
+    var newText = text.substr(0, caretPosition) + insertText + text.substr(caretPosition);
+    textarea.value = newText;
+  },
   keyDownHandler: function(e) {
+    var keyCode = e.keyCode;
+    if (keyCode === 9) {
+      this.focus();
+    }
+
     if (this.inputBlocked) {
       return;
     }
+
+    var textarea = this.getTextArea();
+    var text = textarea.value;
+    if (keyCode === 9) {
+      this.insertAtCaretPosition(String.fromCharCode(9));
+    }
+
     if (this.fireEvent("keydown", e) === false) {
       if (e.preventDefault) {
         e.preventDefault();
@@ -220,11 +239,8 @@ var Wsh;
       }
       return;
     }
-    var textarea = this.getTextArea();
-    var text = textarea.value;
     var lineBreak = this.conf.lineBreak;
     var line = this.getCurrentLine();
-    var keyCode = e.keyCode;
     switch (keyCode) {
       case 16:  //shift
       case 33:  //page up
@@ -242,8 +258,6 @@ var Wsh;
         });
         this.createLine();
         break;
-      case 9:
-        this.focus();
       default:
         this.updateText();
         break;
@@ -270,7 +284,7 @@ var Wsh;
       rc.setEndPoint('EndToStart', re);
       return rc.text.length;
     }
-    return 0;
+    return null;
   },
   restoreCaretPosition: function(){
     this.setCaretPosition(this.prevCaretPosition);
@@ -445,6 +459,7 @@ var Wsh;
     //textArea.scrollIntoView(true);
     textArea.focus();
     this.fireEvent("caretPositionChanged", caret);
+    console.log("Update CaretPosition: " + this.prevCaretPosition + ", " + this.getCaretPosition());
   }
 };
 Wsh.id = 0;

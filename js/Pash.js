@@ -1387,7 +1387,7 @@ xmlashPrototype = {
           me.handleHelp();
           break;
         default:
-          this.showExpectedError("a shell command (HELP, SHOW, USE) or a MDX query (SELECT, WITH)", token, true);
+          this.showExpectedError("a shell command (HELP, SET, SHOW or USE) or a MDX query (SELECT or WITH)", token, true);
       }
     }
     catch (e) {
