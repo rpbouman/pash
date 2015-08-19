@@ -213,6 +213,7 @@ var Wsh;
     var caretPosition = this.getCaretPosition();
     var newText = text.substr(0, caretPosition) + insertText + text.substr(caretPosition);
     textarea.value = newText;
+    this.setCaretPosition(caretPosition + insertText.length);
   },
   keyDownHandler: function(e) {
     var keyCode = e.keyCode;
@@ -228,6 +229,7 @@ var Wsh;
     var text = textarea.value;
     if (keyCode === 9) {
       this.insertAtCaretPosition(String.fromCharCode(9));
+      this.focus();
     }
 
     if (this.fireEvent("keydown", e) === false) {
@@ -262,6 +264,7 @@ var Wsh;
         this.updateText();
         break;
     }
+    console.log("textArea: \"" + textarea.value + "\"");
     this.fireEvent("textChanged", {
       text: textarea.value,
       position: this.getCaretPosition(),
@@ -324,7 +327,7 @@ var Wsh;
     this.fireEvent("afterFocus", {});
   },
   escapeHTML: function(string){
-    return string.replace("&", "&amp;").replace(">", "&gt;").replace("<", "&lt;");
+    return string.replace(/\&/g, "&amp;").replace(/>/g, "&gt;").replace(/</g, "&lt;");
   },
   createLine: function(textString, promptString, className) {
     var cls = Wsh.prefix + "-line";
