@@ -264,7 +264,7 @@ var Wsh;
         this.updateText();
         break;
     }
-    console.log("textArea: \"" + textarea.value + "\"");
+    //console.log("textArea: \"" + textarea.value + "\"");
     this.fireEvent("textChanged", {
       text: textarea.value,
       position: this.getCaretPosition(),
@@ -462,7 +462,7 @@ var Wsh;
     //textArea.scrollIntoView(true);
     textArea.focus();
     this.fireEvent("caretPositionChanged", caret);
-    console.log("Update CaretPosition: " + this.prevCaretPosition + ", " + this.getCaretPosition());
+    //console.log("Update CaretPosition: " + this.prevCaretPosition + ", " + this.getCaretPosition());
   }
 };
 Wsh.id = 0;

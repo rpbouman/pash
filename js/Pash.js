@@ -87,6 +87,7 @@ xmlashPrototype = {
   version: "Edge - Development",
   defaultPrompt: "MDX> ",
   memberPropertyToRender: "Caption",
+  cellPropertyToRender: "FmtValue",
   getTokenizer: function() {
     return this.tokenizer;
   },
@@ -662,6 +663,15 @@ xmlashPrototype = {
         CAPTION: "Caption",
         NAME: "UName"
       }
+    },
+    CELL_PROPERTY: {
+      helpText: "Set the cell property that will be used for the cell values of MDX dataset output.",
+      property: "cellPropertyToRender",
+      expected: ["single quoted string", "double quoted string", "identifier"],
+      values: {
+        VALUE: "Value",
+        FMTVALUE: "FmtValue"
+      }
     }
   },
   getSetProperty: function(keyword){
@@ -1202,11 +1212,14 @@ xmlashPrototype = {
           return thead;
       }
 
+      var cellExtractor = cellset["cell" + me.cellPropertyToRender];
+
       function renderCells(axis) {
           var td = "";
           axis.eachTuple(function(){
-              if (cellset.cellOrdinal() === cellIndex++ && cellset.cellValue) {
-                  value = cellset.cellValue();
+              var value;
+              if (cellset.cellOrdinal() === cellIndex++) {
+                  value = cellExtractor.call(cellset);
                   cellset.nextCell();
               }
               else {

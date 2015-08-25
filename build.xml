@@ -129,6 +129,14 @@
     <delete dir="${icCube}/icCube-5.0.3/${icCubeWeb}/${ant.project.name}"/>
   </target>
 
+  <target name="deploy-iccube-5.1.2" depends="dist,undeploy-iccube-5.1.2" description="deploy distribution">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${icCube}/icCube-5.1.2/${icCubeWeb}"/>
+  </target>
+
+  <target name="undeploy-iccube-5.1.2" description="undeploy distribution">
+    <delete dir="${icCube}/icCube-5.1.2/${icCubeWeb}/${ant.project.name}"/>
+  </target>
+
   <target name="deploy-spago" depends="dist" description="deploy distribution">
     <unzip src="${bin}/${ant.project.name}.zip" dest="${spago.web.dir}"/>
   </target>
