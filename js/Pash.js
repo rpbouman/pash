@@ -1213,6 +1213,10 @@ xmlashPrototype = {
       }
 
       var cellExtractor = cellset["cell" + me.cellPropertyToRender];
+      if (typeof(cellExtractor) !== "function") {
+        me.writeResult("Warning: no cell extractor found for property " + me.cellPropertyToRender + ".");
+        cellExtractor = function(){return ""};
+      }
 
       function renderCells(axis) {
           var td = "";
@@ -1262,6 +1266,7 @@ xmlashPrototype = {
       }
 
       function renderAxis(axisId) {
+        try {
           var axis;
           if (axisId !== -1) {
             axis = dataset.getAxis(axisId);
@@ -1271,12 +1276,14 @@ xmlashPrototype = {
                   me.writeResult(cellset.cellValue());
                   break;
               case 0:
+                  var header = renderHeader(axis, false);
+                  var cells = renderCells(axis);
                   me.writeResult(
                     "<table class=\"dataset\">" +
-                        renderHeader(axis, false) +
+                        header +
                         "<tbody>" +
                           "<tr>" +
-                            renderCells(axis) +
+                            cells +
                           "</tr>" +
                         "</tbody>" +
                     "</table>"
@@ -1291,6 +1298,10 @@ xmlashPrototype = {
                       renderAxis(axisId-1);
                   });
           }
+        }
+        catch (e) {
+          this.error(e);
+        }
       }
       renderAxis(axisCount - 1);
 //    }

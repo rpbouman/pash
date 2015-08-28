@@ -244,10 +244,20 @@ function _isObj(arg) {
     return arg && typeof(arg)==="object";
 };
 function _xmlEncode(value){
-    if (_isStr(value)) {
-        value = value.replace(/\&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-    return value;
+  var value;
+  switch (typeof(value)) {
+    case "string":
+      value = value.replace(/\&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      break;
+    case "undefined":
+      value = "";
+      break;
+    case "object":
+      if (value === null) {
+        value = "";
+      }
+  }
+  return value;
 };
 
 function _decodeXmlaTagName(tagName) {
@@ -276,14 +286,30 @@ var _getElementsByTagName = function(node, tagName){
         };
     }
     else {
+        var checkCriteria = function(node){
+          if (node.nodeType !== 1) {
+            return false;
+          }
+          var nodePrefix = (node.namespaceURI === "" ? "" : node.prefix);
+          if (nodePrefix) {
+            nodePrefix += ":";
+          }
+          var nodeName = nodePrefix + tagName;
+          return nodeName === tagName;
+        };
         func = function(node, tagName){
-            var list = [],
-                criteria = tagName === "*" ? null : function(node){
-                    return (node.nodeType === 1 && ((node.namespaceURI === "" ? "" : node.prefix + ":") + node.nodeName) === tagName);
-                }
-            ;
-            _getElements(node, list, criteria);
-            return list;
+          var criteria;
+          if (tagName === "*") {
+            criteria = null;
+          }
+          else {
+            criteria = checkCriteria;
+          }
+
+          var list = [];
+          _getElements(node, list, criteria);
+
+          return list;
         };
     }
     return (_getElementsByTagName = func)(node, tagName);
@@ -2059,7 +2085,9 @@ Xmla.prototype = {
         if (this._fireEvent(Xmla.EVENT_REQUEST, options, true) && (
             (options.method == Xmla.METHOD_DISCOVER && this._fireEvent(Xmla.EVENT_DISCOVER, options)) ||
             (options.method == Xmla.METHOD_EXECUTE  && this._fireEvent(Xmla.EVENT_EXECUTE, options)))
-        ) myXhr = _ajax(ajaxOptions);
+        ) {
+          myXhr = _ajax(ajaxOptions);
+        }
         return this.response;
     },
     _requestError: function(options, exception) {
@@ -2086,13 +2114,30 @@ Xmla.prototype = {
             if (soapFault.length) {
                 //TODO: extract error info
                 soapFault = soapFault[0];
+
+                //Get faultactor, faultstring and faultcode elements
+                //These really should not be namespaced,
+                //but SAP HANA puts them in the SOAP envelope namespace
+                //Since only these (and detail) elements can occur in SOAP:Fault,
+                //we simply read the childNodes directly instead of using _getElementByTagName
+                var fields = {}, faultActor, faultString, faultCode;
+                var i, childNodes = soapFault.childNodes, n = childNodes.length, childNode;
+                for (i = 0; i < n; i++){
+                  childNode = childNodes[i];
+                  if (childNode.nodeType === 1) {
+                    fields[childNode.nodeName] = _getElementText(childNode);
+                  }
+                }
+                faultActor = fields.fieldactor;
+                faultString = fields.faultstring;
+                faultCode = fields.faultCode;
+
                 request.exception = new Xmla.Exception(
                     Xmla.Exception.TYPE_ERROR,
-                    _getElementsByTagName(soapFault, "faultcode")[0].childNodes[0].data,
-                    _getElementsByTagName(soapFault, "faultstring")[0].childNodes[0].data,
-                    null,
-                    "_requestSuccess",
-                    request
+                    faultCode, faultString,
+                    null, "_requestSuccess",
+                    request, null,
+                    null, faultActor
                 );
             }
             else {
@@ -2130,8 +2175,12 @@ Xmla.prototype = {
                     this._fireEvent(Xmla.EVENT_EXECUTE_ERROR, request);
                     break;
             }
-            if (request.error) request.error.call(request.scope ? request.scope : null, this, request, request.exception);
-            if (request.callback) request.callback.call(request.scope ? request.scope : null, Xmla.EVENT_ERROR, this, request, request.exception);
+            if (request.error) {
+              request.error.call(request.scope ? request.scope : null, this, request, request.exception);
+            }
+            if (request.callback) {
+              request.callback.call(request.scope ? request.scope : null, Xmla.EVENT_ERROR, this, request, request.exception);
+            }
             this._fireEvent(Xmla.EVENT_ERROR, request);
         }
         else {
@@ -7946,7 +7995,7 @@ Xmla.Dataset.Cellset.prototype = {
 *   @class Xmla.Exception
 *   @constructor
 */
-Xmla.Exception = function(type, code, message, helpfile, source, data, args){
+Xmla.Exception = function(type, code, message, helpfile, source, data, args, detail, actor){
     this.type = type;
     this.code = code;
     this.message = message;
@@ -7954,6 +8003,8 @@ Xmla.Exception = function(type, code, message, helpfile, source, data, args){
     this.helpfile = helpfile;
     this.data = data;
     this.args = args;
+    this.detail = detail;
+    this.actor = actor;
     return this;
 };
 
@@ -8282,7 +8333,11 @@ Xmla.Exception.prototype = {
 *   @return a string representing this exception
 */
     toString: function(){
-        return this.type + " " + this.code + ": " + this.message + " (source: " + this.source  + ")";
+        var string =  this.type + " " +
+                      this.code + ": " + this.message +
+                      " (source: " + this.source  + ", " +
+                      " actor: " + this.actor + ")";
+        return string;
     },
 /**
  *  Get a stack trace.
