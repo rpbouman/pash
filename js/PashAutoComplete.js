@@ -539,6 +539,7 @@ PashAutoComplete.prototype = {
     return map;
   },
   popupCatalogsList: function(prefix){
+    var pash = this.pash;
     pash.getCatalogs(function(xmla, request, rowset){
       var words = this.rowsetToWords(rowset, "CATALOG_NAME");
       this.populateList(words);

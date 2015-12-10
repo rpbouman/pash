@@ -8,7 +8,11 @@ function escXml(str) {
 }
 
 var Xmlash = function(conf){
+  conf = conf || {};
   Wsh.apply(this, arguments);
+  if (conf.xmlaUrl) {
+    this.xmlaUrl = conf.xmlaUrl;
+  }
   this.lineNumber = 1;
   this.tokenizer = new exports.PashTokenizer();
   this.prompt = "";
@@ -1451,8 +1455,14 @@ xmlashPrototype = {
   initDatasources: function(){
     switch (arguments.length) {
       case 0:
+        this.writeResult("<br/>");
+        this.writeResult("Initializing Datasources. This may take a while, please wait.");
+        //if a xmlaUrl was specified in the conf of the factory, then that is what we'll use
         var location = document.location, urls = [];
-
+        if (this.xmlaUrl) {
+          urls.push(this.xmlaUrl);
+        } 
+        else
         if (location.search) {
           var search = location.search.substr(1); //get rid of initial ? char.
           search = search.split("&"); //cut in individual parameters;
@@ -1467,6 +1477,8 @@ xmlashPrototype = {
             break;
           }
         }
+        
+        //if no xmlaUrl was configured at all, we try a list of well known ones.        
         if (!urls.length) {
           var origin = location.protocol + "//" + location.host;
           var base = origin + "/";
@@ -1492,9 +1504,10 @@ xmlashPrototype = {
           this.writeResult("<br/>" + title + ".<br/>" + msg);
           return;
         }
-        var me = this;
+        var me = this, url = urls[index];
+        this.writeResult("Trying url " + (index+1) + " of " + urls.length + ": " + url);
         this.xmla.discoverDataSources({
-          url: urls[index],
+          url: url,
           success: function(xmla, request, rowset){
             rowset.eachRow(function(row){
               me.writeResult(
@@ -1523,6 +1536,7 @@ xmlashPrototype = {
               var data = exception.data;
               switch (data.status) {
                 default:
+                  this.writeResult("Failed.");
                   me.initDatasources(urls, ++index);
                   break;
               }
@@ -1561,4 +1575,5 @@ for (prop in wshPrototype) {
 
 Xmlash.prototype = xmlashPrototype;
 exports.Pash = Xmlash;
+exports.Xmlash = Xmlash;
 })(typeof(exports) === "object" ? exports : window);
