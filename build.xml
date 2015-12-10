@@ -22,6 +22,7 @@
   <property name="pentaho-5.2"  location="/home/roland/pentaho-ce/biserver-ce-5.2.0.0-209/biserver-ce/pentaho-solutions/system"/>
   <property name="pentaho-5.3"  location="/home/roland/pentaho-ce/biserver-ce-5.3.0.0-213/biserver-ce/pentaho-solutions/system"/>
   <property name="pentaho-5.4"  location="/home/roland/pentaho-ce/biserver-ce-5.4.0.0-128/biserver-ce/pentaho-solutions/system"/>
+  <property name="pentaho-6.0"  location="C:\biserver-ce-6.0.0.0-353\pentaho-solutions\system"/>
   <property name="pentaho-ee-5.4"  location="/home/roland/pentaho-ee/biserver-ee-5.4.0.1-130/biserver-ee/pentaho-solutions/system"/>
   <property name="jasper.webapps.dir"  location="/home/roland/jasperreports-server-cp-6.0.1/apache-tomcat/webapps"/>
   <property name="tomcat.webapps.dir"  location="/home/roland/apache-tomcat-7.0.56/webapps"/>
@@ -74,6 +75,14 @@
     <delete file="${bin}/${ant.project.name}.zip"/>
     <zip destfile="${bin}/${ant.project.name}.zip" basedir="${bin}"/>
     <delete dir="${bin}/${ant.project.name}"/>
+  </target>
+
+  <target name="deploy-pentaho-6.0" depends="dist">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-6.0}"/>
+  </target>
+
+  <target name="undeploy-pentaho-6.0" description="undeploy distribution">
+    <delete dir="${pentaho-6.0}/${ant.project.name}"/>
   </target>
 
   <target name="deploy-pentaho-5.4" depends="dist">
