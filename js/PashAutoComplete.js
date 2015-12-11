@@ -655,6 +655,7 @@ PashAutoComplete.prototype = {
     try {
       restrictions.DIMENSION_NAME = dimensionName;
       var isDimension, isHierarchy, args = [];
+      var pash = this.pash;
       pash.getDimensions(function(rowset) {
 
         if (rowset.length !== 0){
@@ -673,11 +674,15 @@ PashAutoComplete.prototype = {
     }
     catch (exception){
       //probably no catalog set.
+      console.log("Exception in popupDimensionAndHierarchyDotExpressionList.");
+      console.log(exception);
+      console.log("Is your catalog set?");
     }
   },
   popupHierarchyAndLevelDotExpressionList: function(restrictions, identifier1, identifier2){
     try {
       var args = [];
+      var pash = this.pash;      
       restrictions.DIMENSION_NAME = identifier1;
       //check if identifier1 is a dimension
       pash.getDimensions(function(dimensions) {
@@ -717,6 +722,7 @@ PashAutoComplete.prototype = {
   },
   popupDimensionsAndHierarchiesList: function(restrictions){
     try {
+      var pash = this.pash;      
       pash.getDimensions(function(rowset) {
         var map = {};
         this.rowsetToMap(rowset, "DIMENSION_NAME", map);
@@ -728,6 +734,9 @@ PashAutoComplete.prototype = {
     }
     catch (exception){
       //probably no catalog set.
+      console.log("Exception in popupDimensionsAndHierarchiesList.");
+      console.log(exception);
+      console.log("Is your catalog set?");
     }
   },
   copyArrayTo: function(source, target){
@@ -737,6 +746,7 @@ PashAutoComplete.prototype = {
     }
   },
   getHierarchiesForDimensions: function(map, dimensions, index, restrictions, callback, scope){
+    var pash = this.pash;
     if (index >= dimensions.length) {
       callback.call(scope);
       return;
@@ -762,6 +772,7 @@ PashAutoComplete.prototype = {
       return;
     }
     var hierarchy = hierarchies[index++];
+    var pash = this.pash;
     restrictions.CUBE_NAME = hierarchy.CUBE_NAME;
     restrictions.DIMENSION_UNIQUE_NAME = hierarchy.DIMENSION_UNIQUE_NAME;
     restrictions.HIERARCHY_UNIQUE_NAME = hierarchy.HIERARCHY_UNIQUE_NAME;
@@ -790,6 +801,7 @@ PashAutoComplete.prototype = {
         break;
       }
     };
+    var pash = this.pash;    
     restrictions.CUBE_NAME = dimension.CUBE_NAME;
     restrictions.DIMENSION_UNIQUE_NAME = dimension.DIMENSION_UNIQUE_NAME;
     pash.getMembers(function(members){
@@ -811,6 +823,7 @@ PashAutoComplete.prototype = {
         break;
       }
     };
+    var pash = this.pash;    
     restrictions.CUBE_NAME = hierarchy.CUBE_NAME;
     restrictions.DIMENSION_UNIQUE_NAME = hierarchy.DIMENSION_UNIQUE_NAME;
     restrictions.HIERARCHY_UNIQUE_NAME = hierarchy.HIERARCHY_UNIQUE_NAME;
@@ -828,6 +841,7 @@ PashAutoComplete.prototype = {
       return;
     }
     var level = levels[index++];
+    var pash = this.pash;    
     restrictions.CUBE_NAME = level.CUBE_NAME;
     restrictions.DIMENSION_UNIQUE_NAME = level.DIMENSION_UNIQUE_NAME;
     restrictions.HIERARCHY_UNIQUE_NAME = level.HIERARCHY_UNIQUE_NAME;
@@ -851,6 +865,7 @@ PashAutoComplete.prototype = {
       var map = {};
       var dimensions = [];
       var hierarchies = [];
+      var pash = this.pash;
 
       //get all dimensions that could match our identifier
       restrictions.DIMENSION_NAME = dimensionName;
@@ -877,6 +892,9 @@ PashAutoComplete.prototype = {
     }
     catch (exception){
       //probably no catalog set.
+      console.log("Exception in popupHierarchiesAndLevelsList.");
+      console.log(exception);
+      console.log("Is your catalog set?");
     }
   },
   popupLevelsAndMembersList: function(restrictions, identifier1, identifier2){
@@ -886,6 +904,7 @@ PashAutoComplete.prototype = {
       var dimensionHierarchies = [];
       var hierarchies = [];
       var hierarchyLevels = [];
+      var pash = this.pash;
 
       //get all dimensions that could match our identifier
       restrictions.DIMENSION_NAME = identifier1;
@@ -917,6 +936,9 @@ PashAutoComplete.prototype = {
     }
     catch (exception){
       //probably no catalog set.
+      console.log("Exception in popupLevelsAndMembersList.");
+      console.log(exception);
+      console.log("Is your catalog set?");
     }
   },
   popupDotExpressionListDotExpressionList: function(token) {
@@ -1104,6 +1126,9 @@ PashAutoComplete.prototype = {
               }
               catch (exception){
                 //probably no catalog set.
+                console.log("Exception in checkPopupList.");
+                console.log(exception);
+                console.log("Is your catalog set?");
               }
               break;
             }
@@ -1204,7 +1229,10 @@ PashAutoComplete.prototype = {
             return;
           }
           catch (exception) {
-            //probably no catalog set
+            //probably no catalog set.
+            console.log("Exception in checkPopupList.");
+            console.log(exception);
+            console.log("Is your catalog set?");
           }
           break;
         }
@@ -1395,7 +1423,8 @@ PashAutoComplete.prototype = {
     var style = this.listDom.style;
     style.left = (data.offsetLeft + 15) + "px";
     var line = data.parentNode;
-    var pashDom = this.pash.getDom();
+    var pash = this.pash;
+    var pashDom = pash.getDom();
     var myDom = this.listDom;
     style.top = (line.offsetTop - 95) - (pashDom.scrollTop) + "px";
   },
@@ -1436,6 +1465,7 @@ PashAutoComplete.prototype = {
   populateList: function(words){
     this.clearList();
     var listDom = this.listDom, i, n = words.length, word, item, span;
+    var pash = this.pash;
     for (i = 0; i < n; i++) {
       word = words[i];
       item = document.createElement("DIV");
@@ -1444,7 +1474,7 @@ PashAutoComplete.prototype = {
       }
       span = document.createElement("SPAN");
       item.appendChild(span);
-      span.innerHTML = this.pash.escapeHTML(word);
+      span.innerHTML = pash.escapeHTML(word);
       listDom.appendChild(item);
     }
   },
