@@ -341,7 +341,7 @@ xmlashPrototype = {
           //only store dimensions that belong to a cube.
           if (
             dimension.CUBE_NAME &&
-            dimension.DIMENSION_IS_VISIBLE === true
+            dimension.DIMENSION_IS_VISIBLE !== false
           ) {
             dimensions.push(dimension);
           }
@@ -382,8 +382,8 @@ xmlashPrototype = {
         rowset.eachRow(function(hierarchy){
           if (
             hierarchy.CUBE_NAME &&
-            hierarchy.DIMENSION_IS_VISIBLE === true &&
-            hierarchy.HIERARCHY_IS_VISIBLE === true
+            hierarchy.DIMENSION_IS_VISIBLE !== false &&
+            hierarchy.HIERARCHY_IS_VISIBLE !== false
           ) {
             hierarchies.push(hierarchy);
           }
@@ -424,7 +424,7 @@ xmlashPrototype = {
         rowset.eachRow(function(level){
           if (
             level.CUBE_NAME &&
-            level.LEVEL_IS_VISIBLE === true
+            level.LEVEL_IS_VISIBLE !== false
           ) {
             levels.push(level);
           }
