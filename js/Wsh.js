@@ -217,8 +217,15 @@ var Wsh;
   },
   keyDownHandler: function(e) {
     var keyCode = e.keyCode;
-    if (keyCode === 9) {
-      this.focus();
+    switch (keyCode) {
+      case 8: //backspace key
+        if (e.stopPropagation) {
+          e.stopPropagation();
+        }
+        break;
+      case 9: //tab key
+        this.focus();
+        break;
     }
 
     if (this.inputBlocked) {
@@ -238,6 +245,9 @@ var Wsh;
       }
       else {
         e.returnValue = false;
+      }
+      if (e.stopPropagation) {
+        e.stopPropagation();
       }
       return;
     }
