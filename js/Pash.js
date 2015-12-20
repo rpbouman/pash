@@ -1536,7 +1536,7 @@ xmlashPrototype = {
               var data = exception.data;
               switch (data.status) {
                 default:
-                  this.writeResult("Failed.");
+                  me.writeResult("Failed.");
                   me.initDatasources(urls, ++index);
                   break;
               }
