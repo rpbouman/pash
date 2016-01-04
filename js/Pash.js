@@ -25,7 +25,12 @@ var Xmlash = function(conf){
     restrictions: {
     }
   };
-  this.xmla = new Xmla(this.xmlaRequest);
+  if (conf.xmla) {
+    this.xmla = conf.xmla;
+  }
+  else {
+    this.xmla = new Xmla(this.xmlaRequest);
+  }
   this.xmla.addListener([
     {
       events: Xmla.EVENT_REQUEST,
@@ -63,6 +68,27 @@ var Xmlash = function(conf){
           }
           catch (e) {
             //no extra info
+          }
+        }
+        var detail = exception.detail;
+        if (detail){ 
+          var n = detail.length, i, error, msg;
+          for (i = 0; i < n; i++) {
+            msg = "";
+            error = detail[i];
+            if (error.Description) {
+              msg += error.Description;
+            }
+            if (msg) {
+              msg += " ";
+            }
+            if (error.Source) {
+              msg += "(Source: " + error.Source + ", Code: " + error.ErrorCode + ")";
+            }
+            else {
+              msg += "(Code: " + error.ErrorCode + ")";
+            }
+            this.error(msg);
           }
         }
         this.blockInput(false);
