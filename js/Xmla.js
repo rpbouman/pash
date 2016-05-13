@@ -2056,6 +2056,14 @@ Xmla.prototype = {
         options.restrictions = _applyProps(options.restrictions, this.options.restrictions, false);
         delete options.exception;
 
+        if (
+          !this._fireEvent(Xmla.EVENT_REQUEST, options, true) ||
+          (options.method == Xmla.METHOD_DISCOVER && !this._fireEvent(Xmla.EVENT_DISCOVER, options)) ||
+          (options.method == Xmla.METHOD_EXECUTE  && !this._fireEvent(Xmla.EVENT_EXECUTE,  options))
+        ){
+          return false;
+        }
+
         var soapMessage = this.getXmlaSoapMessage(options);
         this.soapMessage = soapMessage;
         var myXhr;
@@ -2089,12 +2097,7 @@ Xmla.prototype = {
         }
         ajaxOptions.headers = headers;
 
-        if (this._fireEvent(Xmla.EVENT_REQUEST, options, true) && (
-            (options.method == Xmla.METHOD_DISCOVER && this._fireEvent(Xmla.EVENT_DISCOVER, options)) ||
-            (options.method == Xmla.METHOD_EXECUTE  && this._fireEvent(Xmla.EVENT_EXECUTE, options)))
-        ) {
-          myXhr = _ajax(ajaxOptions);
-        }
+        myXhr = _ajax(ajaxOptions);
         return this.response;
     },
     _requestError: function(options, exception) {
@@ -2313,8 +2316,12 @@ Xmla.prototype = {
             options.properties = properties;
         }
         _applyProps(properties, this.options.properties, false)
-        if (!properties[Xmla.PROP_CONTENT]) properties[Xmla.PROP_CONTENT] = Xmla.PROP_CONTENT_SCHEMADATA;
-        if (!properties[Xmla.PROP_FORMAT]) options.properties[Xmla.PROP_FORMAT] = Xmla.PROP_FORMAT_MULTIDIMENSIONAL;
+        if (!properties[Xmla.PROP_CONTENT]) {
+          properties[Xmla.PROP_CONTENT] = Xmla.PROP_CONTENT_SCHEMADATA;
+        }
+        if (!properties[Xmla.PROP_FORMAT]) {
+          options.properties[Xmla.PROP_FORMAT] = Xmla.PROP_FORMAT_MULTIDIMENSIONAL;
+        }
         var request = _applyProps(options, {
             method: Xmla.METHOD_EXECUTE
         }, true);
@@ -2327,7 +2334,9 @@ Xmla.prototype = {
 *   @return {Xmla.Rowset} The result of the invoking the XML/A <code>Execute</code> method. For an asynchronous request, the return value is not defined. For synchronous requests, an instance of a <code>Xmla.Rowset</code> that represents the multi-dimensional result set of the MDX query.
 */
     executeTabular: function(options){
-        if (!options.properties) options.properties = {};
+        if (!options.properties) {
+          options.properties = {};
+        }
         options.properties[Xmla.PROP_FORMAT] = Xmla.PROP_FORMAT_TABULAR;
         return this.execute(options);
     },
@@ -2338,7 +2347,9 @@ and  <code><a href="#property_responseXML">responseXML</a></code> properties.
 *   @param {Object} options An object whose properties convey the options for the XML/A <code>Execute</code> request.
 */
     executeMultiDimensional: function(options){
-        if (!options.properties) options.properties = {};
+        if (!options.properties) {
+          options.properties = {};
+        }
         options.properties[Xmla.PROP_FORMAT] = Xmla.PROP_FORMAT_MULTIDIMENSIONAL;
         return this.execute(options);
     },
@@ -6494,25 +6505,25 @@ Xmla.Dataset.AXIS_ROWS = 1;
 */
 Xmla.Dataset.AXIS_PAGES = 2;
 /**
-*   Can be used as argument for <code><a href="#method_getAxis">getAxis()</a></code> to get the fifth axis (the chapters axis).
-*   Alternatively you can simply call <code><a href="#method_getChapterAxis">getChapterAxis()</a></code>
-*   @property AXIS_CHAPTERS
-*   @static
-*   @final
-*   @type int
-*   @default <code>3</code>
-*/
-Xmla.Dataset.AXIS_CHAPTERS = 3;
-/**
 *   Can be used as argument for <code><a href="#method_getAxis">getAxis()</a></code> to get the fourth axis (the section axis).
 *   Alternatively you can simply call <code><a href="#method_getSectionAxis">getSectionAxis()</a></code>
 *   @property AXIS_SECTIONS
 *   @static
 *   @final
 *   @type int
+*   @default <code>3</code>
+*/
+Xmla.Dataset.AXIS_SECTIONS = 3;
+/**
+*   Can be used as argument for <code><a href="#method_getAxis">getAxis()</a></code> to get the fifth axis (the chapters axis).
+*   Alternatively you can simply call <code><a href="#method_getChapterAxis">getChapterAxis()</a></code>
+*   @property AXIS_CHAPTERS
+*   @static
+*   @final
+*   @type int
 *   @default <code>4</code>
 */
-Xmla.Dataset.AXIS_SECTIONS = 4;
+Xmla.Dataset.AXIS_CHAPTERS = 4;
 /**
 *   Can be used as argument for <code><a href="#method_getAxis">getAxis()</a></code> to get the slicer axis
 *   (the axis that appears in the <code>WHERE</code> clause of an MDX-<code>SELECT</code> statement).
@@ -7043,6 +7054,7 @@ Xmla.Dataset.Axis.prototype = {
         this._hierarchyOrder = [];
         this._hierarchyIndexes = {};
         this.numHierarchies = numHierarchies;
+        var propertyTagName, propertyName;
         for (i = 0; i < numHierarchies; i++){
             hierarchyInfoNode = hierarchyInfoNodes[i];
             hierarchyName = _getAttribute(hierarchyInfoNode, "name");
@@ -7065,14 +7077,43 @@ Xmla.Dataset.Axis.prototype = {
                   if (memberProperty) {
                     type = memberProperty.type;
                   }
+                  else {
+                    switch (nodeName) {                      
+                      case Xmla.Dataset.Axis.MEMBER_LEVEL_NUMBER:
+                      case Xmla.Dataset.Axis.MEMBER_DISPLAY_INFO:
+                        type = "xsd:int";
+                    }
+                  }
                 }
                 converter = _typeConverterMap[type];
                 if (!converter){
                   converter = _textConverter;
                 }
+                propertyTagName = _decodeXmlaTagName(nodeName);
+                switch (propertyTagName) {
+                  case Xmla.Dataset.Axis.MEMBER_UNIQUE_NAME:
+                  case Xmla.Dataset.Axis.MEMBER_CAPTION:
+                  case Xmla.Dataset.Axis.MEMBER_LEVEL_NAME:
+                  case Xmla.Dataset.Axis.MEMBER_LEVEL_NUMBER:
+                  case Xmla.Dataset.Axis.MEMBER_DISPLAY_INFO:
+                    //map default properties with their tagName (Standard) 
+                    propertyName = propertyTagName;
+                    break;
+                  default:
+                    //map non-default properties by unqualified property name.
+                    propertyName = _getAttribute(propertyNode, "name");
+                    if (propertyName) {
+                      propertyName = propertyName.split(".");
+                      propertyName = propertyName[propertyName.length - 1];
+                      if (propertyName.charAt(0) === "[" && propertyName.charAt(propertyName.length -1) === "]") {
+                        propertyName = propertyName.substr(1, propertyName.length - 2);
+                      }
+                    }
+                }
                 properties[nodeName] = {
                     converter: converter,
-                    name: _decodeXmlaTagName(nodeName)
+                    name: propertyTagName,
+                    propertyName: propertyName
                 };
             }
             this._hierarchyDefs[hierarchyName] = hierarchyDef;
@@ -7090,7 +7131,15 @@ Xmla.Dataset.Axis.prototype = {
                 "Xmla.DataSet.Axis",
                 root
             )._throw();
-        memberSchema = _getElementsByTagNameNS(memberSchema, _xmlnsSchema, _xmlnsSchemaPrefix, "sequence")[0],
+        memberSchema = _getElementsByTagNameNS(memberSchema, _xmlnsSchema, _xmlnsSchemaPrefix, "sequence");
+        if (!memberSchema.length) {
+          //Jedox does not specify content of members.
+          if (!_isUnd(console.error)) {
+            console.error("MemberType in schema does not define any child elements. Are you running on Jedox/Palo?");
+          }
+          return;
+        }
+        memberSchema = memberSchema[0];
         memberSchemaElements = _getElementsByTagNameNS(memberSchema, _xmlnsSchema, _xmlnsSchemaPrefix, "element");
         numMemberSchemaElements = memberSchemaElements.length;
         for (i = 0; i < numMemberSchemaElements; i++) {
@@ -7121,7 +7170,9 @@ Xmla.Dataset.Axis.prototype = {
         this._members = null;
     },
     _getMembers: function(){
-        if (!this.hasMoreTuples()) return null;
+        if (!this.hasMoreTuples()) {
+          return null;
+        }
         return _getElementsByTagNameNS(
             this._tuples[this._tupleIndex],
             _xmlnsDataset, "", "Member"
@@ -7235,7 +7286,7 @@ Xmla.Dataset.Axis.prototype = {
 */
     getTuple: function() {
         var i, n = this.numHierarchies,
-            hierarchies = {}, members = [],
+            hierarchies = {}, member, members = [],
             tuple = {
                 index: this._tupleIndex,
                 hierarchies: hierarchies,
@@ -7243,7 +7294,9 @@ Xmla.Dataset.Axis.prototype = {
             }
         ;
         for (i=0; i < n; i++) {
-          members.push(hierarchies[this._hierarchyOrder[i]] = this._member(i));
+          member = this._member(i);
+          hierarchies[this._hierarchyOrder[i]] = member;
+          members.push(member);
         }
         return tuple;
     },
@@ -7446,10 +7499,14 @@ Xmla.Dataset.Axis.prototype = {
         ;
         for (i = 0; i < n; i++) {
             el = childNodes[i];
-            if (el.nodeType !== 1 || (!(property = properties[el.nodeName]))) {
+            if (el.nodeType !== 1) {
               continue;
             }
-            member[property.name] = property.converter(_getElementText(el));
+            property = properties[el.nodeName];
+            if (!property) {
+              continue;
+            }
+            member[property.propertyName || property.name] = property.converter(_getElementText(el));
         }
         return member;
     },
