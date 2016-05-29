@@ -1,0 +1,19 @@
+{
+  "name": "MDX Shell (Trial)",
+  "description": "MDX Shell for Google Chrome (Trial edition)",
+  "version": "0.0.0.1",
+  "manifest_version": 2,
+  "app": {
+    "background": {
+      "scripts": ["background.js"]
+    }
+  },
+  "icons": { 
+    "16": "images/mdx-terminal16x16.png", 
+    "128": "images/pash128x128.png" 
+  },
+  "permissions": [
+    "http://*/",
+    "https://*/"
+  ]
+}

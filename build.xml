@@ -18,6 +18,8 @@
   <property name="bipasswd"         value="password"/>
   <property name="bihome"           value="http://${bihost}:${biport}/pentaho?userid=${biuser}&amp;password=${bipasswd}"/>
 
+  <property name="deploy"  location="deploy"/>
+
   <property name="pentaho-5.1"  location="/home/roland/pentaho-ce/biserver-ce-5.1.0.0-752/biserver-ce/pentaho-solutions/system"/>
   <property name="pentaho-5.2"  location="/home/roland/pentaho-ce/biserver-ce-5.2.0.0-209/biserver-ce/pentaho-solutions/system"/>
   <property name="pentaho-5.3"  location="/home/roland/pentaho-ce/biserver-ce-5.3.0.0-213/biserver-ce/pentaho-solutions/system"/>
@@ -51,6 +53,12 @@
       <file file="version.xml"/>
     </copy>
 
+    <copy todir="${bin}/${ant.project.name}">
+      <file file="chrome/background.js"/>
+      <file file="chrome/manifest.json"/>
+      <file file="chrome/main.js"/>
+    </copy>
+    
     <copy todir="${bin}/${ant.project.name}/css">
       <fileset dir="css" includes="**"/>
     </copy>
@@ -77,6 +85,11 @@
     <delete dir="${bin}/${ant.project.name}"/>
   </target>
 
+  <target name="deploy" depends="dist">
+    <unzip src="${bin}/${ant.project.name}.zip" dest="${deploy}"/>
+  </target>
+  
+  
   <target name="deploy-pentaho-6.0" depends="dist">
     <unzip src="${bin}/${ant.project.name}.zip" dest="${pentaho-6.0}"/>
   </target>

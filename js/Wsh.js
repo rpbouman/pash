@@ -119,7 +119,8 @@ var Wsh;
     dom.className = Wsh.prefix;
     dom.id = id;
     dom.onclick = function() {
-      me.focus();
+      //TODO: if click on current line, then move the cursor.
+      //me.focus();
     }
 
     var textarea = doc.createElement("TEXTAREA");
@@ -203,7 +204,8 @@ var Wsh;
         this.setTextAreaText(this.oldValue);
       }
       textarea.disabled = false;
-      textarea.focus();
+      //textarea.focus();
+      this.focus();
       this.inputBlocked = false;
     }
   },
@@ -470,7 +472,8 @@ var Wsh;
     //style.top = (dom.scrollHeight + dom.clientHeight) + "px";
     style.left = (caret.offsetLeft + caret.clientWidth) + "px";
     //textArea.scrollIntoView(true);
-    textArea.focus();
+    //textArea.focus();
+    this.focus();
     this.fireEvent("caretPositionChanged", caret);
     //console.log("Update CaretPosition: " + this.prevCaretPosition + ", " + this.getCaretPosition());
   }

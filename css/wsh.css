@@ -4,7 +4,13 @@ html, body {
   font-family: monospace;
   background-color: white;
   color: black;
-}
+  /*
+    see: https://developer.chrome.com/apps/app_deprecated
+    Chrome packaged apps have user content selection disabled by default.
+    We really need it to be on, so we set it explicitly.
+  */
+  -webkit-user-select: text;
+ }
 
 .wsh {
   position: absolute;

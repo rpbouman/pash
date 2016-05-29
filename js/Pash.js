@@ -7,117 +7,28 @@ function escXml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-var Xmlash = function(conf){
-  conf = conf || {};
-  Wsh.apply(this, arguments);
-  if (conf.xmlaUrl) {
-    this.xmlaUrl = conf.xmlaUrl;
-  }
-  this.lineNumber = 1;
-  this.tokenizer = new exports.PashTokenizer();
-  this.prompt = "";
-  this.statementLines = [];
-  this.xmlaRequest = {
-    //forceResponseXMLEmulation: true,
-    async: true,
-    properties: {
-    },
-    restrictions: {
-    }
-  };
-  if (conf.xmla) {
-    this.xmla = conf.xmla;
-  }
-  else {
-    this.xmla = new Xmla(this.xmlaRequest);
-  }
-  this.xmla.addListener([
-    {
-      events: Xmla.EVENT_REQUEST,
-      handler: function(){
-        this.blockInput(true);
-      },
-      scope: this
-    },
-    {
-      events: Xmla.EVENT_SUCCESS,
-      handler: function(){
-        this.blockInput(false);
-      },
-      scope: this
-    },
-    {
-      events: Xmla.EVENT_ERROR,
-      handler: function(xmla, request, exception){
-        var exception = request.exception, code, desc;
-        code = exception.code;
-        desc = exception.message;
-        if (
-          request.method === Xmla.METHOD_DISCOVER &&
-          request.requestType === Xmla.DISCOVER_DATASOURCES
-        ) {
-          console.log("Error discovering datasource: " + escXml(code) + ": " + escXml(desc));
-        }
-        else {
-          this.error(desc + " (" + code + ")");
-          try { //try to extract code and desc, these are passed by mondrian and often contain the actual information.
-            var xml = request.xhr.responseXML;
-            var code = xml.getElementsByTagName("code")[0].firstChild.data;
-            var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
-            this.error(escXml(desc) + " (" + escXml(code) + ")");
-          }
-          catch (e) {
-            //no extra info
-          }
-        }
-        var detail = exception.detail;
-        if (detail){ 
-          var n = detail.length, i, error, msg;
-          for (i = 0; i < n; i++) {
-            msg = "";
-            error = detail[i];
-            if (error.Description) {
-              msg += error.Description;
-            }
-            if (msg) {
-              msg += " ";
-            }
-            if (error.Source) {
-              msg += "(Source: " + error.Source + ", Code: " + error.ErrorCode + ")";
-            }
-            else {
-              msg += "(Code: " + error.ErrorCode + ")";
-            }
-            this.error(msg);
-          }
-        }
-        this.blockInput(false);
-      },
-      scope: this
-    }
-  ]);
-  this.lines = [
-    "MDX shell version " + this.version + " powered by Xmla4js.",
-    "Copyright 2014, 2015 Roland Bouman.",
-    "This program is open source."
-  ];
-  this.addListener("leaveLine", this.leaveLineHandler, this);
-  this.render();
-  this.initDatasources();
-  this.schemaCache = {};
-};
-
-xmlashPrototype = {
+var xmlashPrototype = {
   commandList: [
     "HELP",
     "SHOW",
     "SET",
-    "USE"
+    "USE",
+    "EXIT"
   ],
   version: "Edge - Development",
   defaultPrompt: "MDX> ",
   memberPropertyToRender: "Caption",
   cellPropertyToRender: "FmtValue",
+  supportsCommand: function(command){
+    command = command.toUpperCase();
+    var i, commands = this.commandList, n = commands.length;
+    for (i = 0; i < n; i++) {
+      if (commands[i] === command) {
+        return true;
+      }
+    }
+    return false;
+  },
   getTokenizer: function() {
     return this.tokenizer;
   },
@@ -213,8 +124,11 @@ xmlashPrototype = {
         DataSourceInfo: xmlaRequest.DataSourceInfo
       }
     };
+
     var oldCatalog = this.getCurrentCatalog();
+    this.oldCatalog = oldCatalog;
     request.restrictions.CATALOG_NAME = request.properties.Catalog = token.text;
+
     var me = this;
     request.success = function(xmla, request, rowset){
       var i = 0, catalog;
@@ -229,6 +143,7 @@ xmlashPrototype = {
       if (i === 1) {
         me.currentCatalog = catalog.CATALOG_NAME;
         me.showCurrentCatalog();
+        //TODO: show int to show cubes?
         me.prompt = me.defaultPrompt;
       }
       else {
@@ -267,7 +182,7 @@ xmlashPrototype = {
               ": " + message + "?"
             );
           }
-          me.currentCatalog = oldCatalog;
+          me.currentCatalog = me.oldCatalog;
         },
         null,
         me
@@ -1080,6 +995,10 @@ xmlashPrototype = {
       this.writeResult(helpText, false);
     }, this);
   },
+  handleExit: function(){
+    window.close();
+  },
+  connectHelp: "Type CONNECT \"&lt;URL of a XML/A provider&gt;\" to connect to a XML/A provider",
   handleHelp: function(){
     var me = this, tokenizer = me.tokenizer, token, text, message = "";
     while (tokenizer.hasMoreTokens()){
@@ -1096,6 +1015,9 @@ xmlashPrototype = {
                      "<br/>Check out the tutorial:" +
                      "<br/>" + this.tutorialLine
           ;
+          break;
+        case "CONNECT":
+          message += this.connectHelp + ".";
           break;
         case "SET":
           if (tokenizer.hasMoreTokens()) {
@@ -1176,7 +1098,7 @@ xmlashPrototype = {
     }
     if (!message.length) {
       message = "Type an MDX query, or one of the shell commands." +
-                "<br/>Valid commands are: SET, SHOW, USE and HELP." +
+                "<br/>Valid commands are: " + this.commandList.join(", ") + 
                 "<br/>To run the command or query, type a semi-colon (;), then press the Enter key." +
                 "<br/>" +
                 "<br/>To get help about a specific shell command, type HELP &lt;commmand&gt;." +
@@ -1347,11 +1269,129 @@ xmlashPrototype = {
     }
     return count;
   },
+  handleConnect: function(){
+    var me = this, tokenizer = me.tokenizer, token, func;
+    var hasMoreTokens = tokenizer.hasMoreTokens();
+    var funcName, token, text, url, user, password;
+    if (hasMoreTokens) {
+      token = tokenizer.nextToken();
+      if (token.type === "double quoted string") {
+        text = token.text;
+        url = text.substring(1, text.length - 1);
+      }
+      //if we have parsed a url, check if there is a AS "<user>" IDENTIFIED BY "<password>" clause.
+      if (url && tokenizer.hasMoreTokens()) {
+        token = tokenizer.nextToken();
+        if (token.type === "identifier" && token.text.toUpperCase() === "AS") {
+
+          //get the username
+          hasMoreTokens = tokenizer.hasMoreTokens();
+          if (hasMoreTokens){
+            token = tokenizer.nextToken();
+            if (token.type === "double quoted string")  {
+              text = token.text;
+              user = text.substring(1, text.length - 1);
+            }
+          }
+          if (!user) {
+            this.showExpectedError(
+              "double quoted username",
+              hasMoreTokens ? token : "end of statement"
+            );
+            return;
+          }
+
+          //parse a PASSWORD clause
+          hasMoreTokens = tokenizer.hasMoreTokens();
+          if (hasMoreTokens){
+            token = tokenizer.nextToken();
+          }
+          if (!hasMoreTokens || token.type !== "identifier" || token.text.toUpperCase() !== "PASSWORD")  {
+            this.showExpectedError(
+              "PASSWORD",
+              hasMoreTokens ? token : "end of statement"
+            );
+            return;
+          }
+
+          //get the password
+          hasMoreTokens = tokenizer.hasMoreTokens();
+          if (hasMoreTokens){
+            token = tokenizer.nextToken();
+            if (token.type === "double quoted string")  {
+              text = token.text;
+              password = text.substring(1, text.length - 1);
+            }
+          }
+          if (!password) {
+            this.showExpectedError(
+              "double quoted password",
+              hasMoreTokens ? token : "end of statement"
+            );
+            return;
+          }
+          
+        } 
+        else {
+          //more tokens after the URL but it is not an AS clause. Error!
+          this.showExpectedError(
+            "AS or end of statement",
+            token
+          );
+          return;
+        }
+      }
+    }
+    if (url) {
+      this.xmlaUrl = url;
+      this.setCredentials(user, password);
+      this.initDatasources();
+    }
+    else {
+      this.showExpectedError(
+        "\"&lt;URL of the XML/A provider&gt;\"",
+        "end of statement"
+      );
+    }
+  },
+  setCredentials: function(username, password, object){
+    this.username = username;
+    this.password = password;
+    if (!object) {
+      object = this.xmlaRequest;
+    }
+    if (!username) {
+      delete object.username;
+      delete object.password;
+      if (object.headers) {
+        delete object.headers.Authorization;
+      }
+    }
+    else {
+      //object.username = username;
+      //object.password = password;
+      if (!object.headers) {
+        object.headers = {};
+      }
+      object.headers.Authorization = "Basic " + btoa(username + ":" + password);
+    }
+  },
   handleExecute: function(){
     var me = this;
     var statement = me.statementLines.join("\n");
     statement = statement.substr(0, statement.lastIndexOf(";"));
     statement = statement.replace(/\xA0/g, " ");
+    if (me.conf.maxStatementLength && statement.length > me.conf.maxStatementLength) {
+      me.writeResult(
+        "<br/>Maximum query length exceeded!" + 
+        "<br/>Your query is " + statement.length + " characters." + 
+        "<br/>You are running a trial edition of MDX Shell for Chrome." +
+        "<br/>The trial edition only supports a maximum of " + me.conf.maxStatementLength + " characters." + 
+        "<br/>Please upgrade to the Professional edition if you want to run this query.",
+        true
+      );
+      return;
+    }
     var request = me.xmlaRequest;
     delete request.restrictions;
     delete request.error;
@@ -1421,6 +1461,9 @@ xmlashPrototype = {
     }
     try {
       switch (token.text.toUpperCase()) {
+        case "CONNECT":
+          me.handleConnect();
+          break;
         case "SELECT":
         case "WITH":
           me.handleExecute();
@@ -1439,6 +1482,9 @@ xmlashPrototype = {
           break;
         case "HELP":
           me.handleHelp();
+          break;
+        case "EXIT":
+          me.handleExit();
           break;
         default:
           this.showExpectedError("a shell command (HELP, SET, SHOW or USE) or a MDX query (SELECT or WITH)", token, true);
@@ -1481,10 +1527,9 @@ xmlashPrototype = {
   initDatasources: function(){
     switch (arguments.length) {
       case 0:
-        this.writeResult("<br/>");
-        this.writeResult("Initializing Datasources. This may take a while, please wait.");
-        //if a xmlaUrl was specified in the conf of the factory, then that is what we'll use
+        this.writeResult("<br/>", true);
         var location = document.location, urls = [];
+        //if a xmlaUrl was specified in the conf of the factory, then that is what we'll use
         if (this.xmlaUrl) {
           urls.push(this.xmlaUrl);
         } 
@@ -1506,18 +1551,29 @@ xmlashPrototype = {
         
         //if no xmlaUrl was configured at all, we try a list of well known ones.        
         if (!urls.length) {
-          var origin = location.protocol + "//" + location.host;
-          var base = origin + "/";
-          //mondrian, f.e. http://localhost:8080/mondrian/xmla
-          urls.push(base + "mondrian/xmla");
-          //jasperreports, f.e. http://localhost:8080/jasperserver/xmla
-          urls.push(base + "jasperserver/xmla");
-          //icCube, f.e. http://localhost:8080/icCube/xmla
-          urls.push(base + "icCube/xmla");
-          //pentaho, f.e. http://localhost:8080/pentaho/Xmla
-          urls.push(base + location.pathname.split("/")[1] + "/Xmla");
-          //msas, f.e. http://localhost/OLAP/msmdpump.dll
-          urls.push(base + "OLAP/msmdpump.dll");
+          if (this.supportsCommand("CONNECT")) {
+            this.writeResult(this.connectHelp + " or HELP to get help.", true);
+            this.prompt = this.defaultPrompt;
+            this.createLine("", this.prompt);
+            return;
+          }
+          else {
+            var origin = location.protocol + "//" + location.host;
+            var base = origin + "/";
+            //mondrian, f.e. http://localhost:8080/mondrian/xmla
+            urls.push(base + "mondrian/xmla");
+            //jasperreports, f.e. http://localhost:8080/jasperserver/xmla
+            urls.push(base + "jasperserver/xmla");
+            //icCube, f.e. http://localhost:8080/icCube/xmla
+            urls.push(base + "icCube/xmla");
+            //pentaho, f.e. http://localhost:8080/pentaho/Xmla
+            urls.push(base + location.pathname.split("/")[1] + "/Xmla");
+            //msas, f.e. http://localhost/OLAP/msmdpump.dll
+            urls.push(base + "OLAP/msmdpump.dll");
+          }
+        }
+        if (urls.length) {
+          this.writeResult("Initializing Datasources. This may take a while, please wait.", true);
         }
         this.initDatasources(urls, 0);
         break;
@@ -1525,14 +1581,16 @@ xmlashPrototype = {
         var urls = arguments[0], index = arguments[1];
         if (index >= urls.length) {
           var title = "Error discovering datasources";
-          var msg = "Unable to find the XML/A service. Try specifying the URL of the XML/A service using the \"XmlaUrl\" URL query parameter."
+          var msgHead = "Unable to find the XML/A service.";
+          var msgTail = this.supportsCommand("CONNECT") ? "Try entering the CONNECT command." : "Try specifying the URL of the XML/A service using the \"XmlaUrl\" URL query parameter.";
+          var msg = msgHead + "<br/>" + msgTail;
           showAlert(title, msg);
           this.writeResult("<br/>" + title + ".<br/>" + msg);
           return;
         }
         var me = this, url = urls[index];
-        this.writeResult("Trying url " + (index+1) + " of " + urls.length + ": " + url);
-        this.xmla.discoverDataSources({
+        this.writeResult("Trying url " + (index+1) + " of " + urls.length + ": " + url, true);
+        var req = {
           url: url,
           success: function(xmla, request, rowset){
             rowset.eachRow(function(row){
@@ -1543,44 +1601,65 @@ xmlashPrototype = {
                 "<br/>URL: " + row.URL +
                 "<br/>Provider: " + row.ProviderName + ", type: " + row.ProviderType +
                 "<br/>Authentication mode: " + row.AuthenticationMode,
-                ""
+                true
               );
               me.xmlaRequest.properties.DataSourceInfo = row.DataSourceInfo;
               xmla.setOptions({
                 url: request.url
               });
 
-              me.handleHelp();
-              me.createLine();
+              //show the help message the first time we connect.
+              if (me.initialHelpShown !== true) {
+                me.handleHelp();
+                me.initialHelpShown = true;
+              }
+
+              me.writeResult(
+                "<br/>" +
+                "<br/>Hint:" +
+                "<br/>Type SHOW CATALOGS to list the available catalogs." +
+                "<br/>Then, type USE [&lt;catalog-name&gt;] to select a particular catalog and enter MDX queries.",
+                true
+              );
+
               me.prompt = me.defaultPrompt;
               me.createLine("", me.prompt);
             });
           },
           error: function(xmla, request){
+            me.setCredentials(null, null);
             var exception = request.exception;
             if (exception.code === -10) {
               var data = exception.data;
               switch (data.status) {
                 default:
-                  me.writeResult("Failed.");
+                  me.writeResult(data.status + " " + data.statusText);
                   me.initDatasources(urls, ++index);
                   break;
               }
             }
             else
-            if (exception.code.indexOf("SOAP-ENV") === 0) {
-              me.error(exception.code + ": " + exception.message);
-              try {
-                var xml = request.xhr.responseXML;
-                var code = xml.getElementsByTagName("code")[0].firstChild.data;
-                var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
-                me.error(desc + " (" + code + ")");
-              }
-              catch (e) {
+            if (exception.code) {
+              if (exception.code.indexOf("SOAP-ENV") === 0) {
+                me.error(exception.code + ": " + exception.message);
+                try {
+                  var xml = request.xhr.responseXML;
+                  var code = xml.getElementsByTagName("code")[0].firstChild.data;
+                  var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
+                  me.error(desc + " (" + code + ")");
+                }
+                catch (e) {
+                }
               }
             }
+            else {
+              me.error("Unexpected runtime error.")
+              me.error(exception.message);
+            }
           }
-        });
+        };
+        me.setCredentials(me.username, me.password, req);
+        this.xmla.discoverDataSources(req);
         break;
       default:
     }
@@ -1591,6 +1670,116 @@ xmlashPrototype = {
   getXmlaRequest: function(){
     return this.xmlaRequest;
   }
+};
+
+var Xmlash = function(conf){
+  conf = conf || {};
+  Wsh.apply(this, arguments);
+  if (conf.xmlaUrl) {
+    this.xmlaUrl = conf.xmlaUrl;
+  }
+  this.lineNumber = 1;
+  this.tokenizer = new exports.PashTokenizer();
+  this.prompt = "";
+  this.statementLines = [];
+  this.xmlaRequest = {
+    //forceResponseXMLEmulation: true,
+    async: true,
+    properties: {
+    },
+    restrictions: {
+    }
+  };
+
+  if (conf.username) {
+    this.setCredentials(conf.username, conf.password);
+  }
+
+  if (conf.xmla) {
+    this.xmla = conf.xmla;
+  }
+  else {
+    this.xmla = new Xmla(this.xmlaRequest);
+  }
+  this.xmla.addListener([
+    {
+      events: Xmla.EVENT_REQUEST,
+      handler: function(event, request, xmla){
+        this.blockInput(true);
+      },
+      scope: this
+    },
+    {
+      events: Xmla.EVENT_SUCCESS,
+      handler: function(){
+        this.blockInput(false);
+      },
+      scope: this
+    },
+    {
+      events: Xmla.EVENT_ERROR,
+      handler: function(xmla, request, exception){
+        var exception = request.exception, code, desc;
+        code = exception.code;
+        desc = exception.message;
+        if (
+          request.method === Xmla.METHOD_DISCOVER &&
+          request.requestType === Xmla.DISCOVER_DATASOURCES
+        ) {
+          console.log("Error discovering datasource: " + escXml(code) + ": " + escXml(desc));
+        }
+        else {
+          this.error(desc + " (" + code + ")");
+          try { //try to extract code and desc, these are passed by mondrian and often contain the actual information.
+            var xml = request.xhr.responseXML;
+            var code = xml.getElementsByTagName("code")[0].firstChild.data;
+            var desc = xml.getElementsByTagName("desc")[0].firstChild.data;
+            this.error(escXml(desc) + " (" + escXml(code) + ")");
+          }
+          catch (e) {
+            //no extra info
+          }
+        }
+        var detail = exception.detail;
+        if (detail){ 
+          var n = detail.length, i, error, msg;
+          for (i = 0; i < n; i++) {
+            msg = "";
+            error = detail[i];
+            if (error.Description) {
+              msg += error.Description;
+            }
+            if (msg) {
+              msg += " ";
+            }
+            if (error.Source) {
+              msg += "(Source: " + error.Source + ", Code: " + error.ErrorCode + ")";
+            }
+            else {
+              msg += "(Code: " + error.ErrorCode + ")";
+            }
+            this.error(msg);
+          }
+        }
+        this.blockInput(false);
+      },
+      scope: this
+    }
+  ]);
+  
+  var extraCommands = conf.extraCommands || [];
+  this.commandList = xmlashPrototype.commandList.concat(extraCommands);
+  this.commandList.sort();
+  
+  this.lines = [
+    this.conf.appTitle || ("MDX shell version " + this.version + " powered by xmla4js."),
+    "Copyright 2014 - 2016 Roland Bouman.",
+    "This program is open source software."
+  ];
+  this.addListener("leaveLine", this.leaveLineHandler, this);
+  this.render();
+  this.initDatasources();
+  this.schemaCache = {};
 };
 
 var prop, wshPrototype = Wsh.prototype;
